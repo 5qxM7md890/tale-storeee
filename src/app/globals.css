@@ -1,0 +1,299 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg: #050706;
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.70);
+  --border: rgba(255,255,255,0.10);
+  --brand: #10B981;
+  --brand-soft: rgba(16,185,129,0.14);
+  --brand-softer: rgba(16,185,129,0.14);
+}
+
+html, body {
+  position: relative;
+height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Fate-like dotted grid + green glow */
+
+
+
+
+
+
+::selection { background: rgba(16,185,129,0.14); }
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+
+/* Utility: subtle frosted cards like Fate */
+.fate-card {
+  background: rgba(0,0,0,0.34);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+}
+
+
+.logo-glow { filter: drop-shadow(0 0 14px rgba(16,185,129,0.14)); }
+.logo-glow-strong { filter: drop-shadow(0 0 22px rgba(16,185,129,0.14)); }
+.fate-divider { border-color: rgba(16,185,129,0.14); }
+
+
+
+/* === Fate-like dark theme (Tale Store) === */
+:root{
+  --bg0:#050607;
+  --bg1:#070a0a;
+  --surface: rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.10);
+  --muted: rgba(255,255,255,0.70);
+  --text: rgba(255,255,255,0.92);
+  --brand: #10b981; /* emerald */
+  --brand2:#14b8a6; /* teal */
+}
+
+/* Background layers similar to Fate */
+
+
+/* Subtle dotted grid overlay */
+
+
+
+/* Glass card style */
+.fate-card{
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 14px 60px rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+}
+
+.fate-pill{
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.14);
+  color: rgba(255,255,255,0.90);
+}
+
+
+
+.fate-logo-glow{
+  filter: drop-shadow(0 0 18px rgba(16,185,129,0.08));
+}
+
+/* === End theme === */
+
+
+/* === Revised Fate background (non-fixed) === */
+
+
+
+
+
+
+/* Fate-like background (subtle, non-fixed, no side bands) */
+/* Dotted grid (very subtle) */
+
+
+
+
+/* === Fate-style background (non-fixed, minimal artifacts) === */
+
+
+.fate-bg::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  /* subtle top glow + tiny bottom glow (no side bands) */
+  background:
+    radial-gradient(900px 520px at 50% -18%, rgba(16,185,129,0.06), transparent 60%),
+    radial-gradient(900px 520px at 50% 118%, rgba(16,185,129,0.04), transparent 62%);
+}
+.fate-bg::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  /* very subtle dotted grid */
+  background-image: radial-gradient(rgba(255,255,255,0.08) 0.55px, transparent 0.55px);
+  background-size: 48px 48px;
+  opacity:0.028;
+  mask-image: radial-gradient(900px 520px at 50% 14%, rgba(0,0,0,1), transparent 72%);
+}
+/* Ensure page content sits above overlays */
+.fate-bg > *{ position: relative; z-index: 1; }
+/* === End background === */
+
+
+
+/* --- Fate subtle background tweaks (v20) --- */
+
+
+
+
+
+
+/* === v23: clean Fate-like background (very subtle) === */
+
+
+.fate-bg::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(880px 520px at 50% -18%, rgba(16,185,129,0.14), transparent 62%),
+    radial-gradient(900px 520px at 50% 118%, rgba(16,185,129,0.14), transparent 64%);
+}
+.fate-bg::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background-image: radial-gradient(rgba(255,255,255,0.08) 0.6px, transparent 0.6px);
+  background-size: 56px 56px;
+  opacity:0.015;
+  mask-image: radial-gradient(900px 520px at 50% 14%, rgba(0,0,0,1), transparent 72%);
+}
+
+.fate-bg > *{ position: relative; z-index: 1; }
+/* === end v23 background === */
+
+
+.fate-grid{
+  position: relative;
+}
+.fate-grid:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image: radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity:0.06;
+  mask-image: radial-gradient(85% 75% at 50% 18%, black 0%, transparent 70%);
+}
+
+/* Mesh overlay inside media cards (like Fate screenshots) */
+.fate-media{ position: relative; overflow:hidden; }
+.fate-media:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background-image: radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity:0.06;
+  mask-image: radial-gradient(70% 70% at 50% 50%, black 0%, transparent 78%);
+}
+.fate-media:after{
+  content:"";
+  position:absolute;
+  inset:-20%;
+  pointer-events:none;
+  background: radial-gradient(closest-side, rgba(16,185,129,0.18), transparent 60%);
+  opacity:0.35;
+}
+
+.fate-btn{background: linear-gradient(180deg, rgba(16,185,129,1) 0%, rgba(16,185,129,0.78) 100%); box-shadow: 0 10px 30px rgba(16,185,129,0.35); color:#04110a;}
+.fate-btn:hover{filter: brightness(1.05); box-shadow: 0 12px 36px rgba(16,185,129,0.40);}
+
+
+
+/* === Fate-style background (smooth, no banding) === */
+html, body {
+  background-color: #050607;
+}
+
+body {
+  background:
+    radial-gradient(1100px 620px at 50% 14%, rgba(16,185,129,0.11), transparent 62%),
+    radial-gradient(900px 520px at 50% 110%, rgba(16,185,129,0.06), transparent 60%),
+    linear-gradient(#050607, #050607);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1px);
+  background-size: 34px 34px;
+  opacity: 0.06;
+  mask-image: radial-gradient(70% 55% at 50% 18%, #000 0%, transparent 72%);
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%27140%27%20height%3D%27140%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%27.8%27%20numOctaves%3D%272%27%20stitchTiles%3D%27stitch%27/%3E%3C/filter%3E%3Crect%20width%3D%27140%27%20height%3D%27140%27%20filter%3D%27url%28%23n%29%27%20opacity%3D%27.35%27/%3E%3C/svg%3E");
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+}
+
+.showcase-frame {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.showcase-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px);
+  background-size: 26px 26px;
+  opacity: 0.08;
+  mask-image: radial-gradient(80% 75% at 50% 30%, #000 0%, transparent 70%);
+}
+
+.showcase-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(420px 260px at 18% 18%, rgba(16,185,129,0.10), transparent 65%),
+    radial-gradient(420px 260px at 86% 26%, rgba(16,185,129,0.07), transparent 70%);
+  opacity: 0.9;
+}
+
+
+/* Hide scrollbar (mobile chips) */
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+
+
+/* Subtle noise to remove gradient banding */
+.fate-noise{position:relative}
+.fate-noise:after{content:"";position:fixed;inset:0;pointer-events:none;opacity:0.028;mix-blend-mode:overlay;background-image:url('/noise.svg');}
+
+
+/* Mesh/dots overlay for showcase images */
+.fate-frame{position:relative;overflow:hidden}
+.fate-frame:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1px);background-size:38px 38px;opacity:0.10;mask-image:radial-gradient(80% 80% at 50% 50%, black 0%, transparent 70%);} 
+.fate-frame:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(420px 240px at 20% 30%, rgba(16,185,129,0.18), transparent 60%),radial-gradient(420px 240px at 80% 70%, rgba(16,185,129,0.10), transparent 60%);opacity:0.35;}
+
+
+html, body { overflow-x: hidden; }
