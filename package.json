@@ -1,0 +1,50 @@
+{
+  "name": "fate-store-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
+    "start": "node scripts/start.mjs",
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed",
+    "stripe:sync": "tsx scripts/stripe-sync.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.0",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-select": "^2.1.6",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.0.0",
+    "ioredis": "^5.4.1",
+    "jose": "^5.2.4",
+    "next": "^16.0.0",
+    "next-intl": "^4.0.0",
+    "prisma": "^6.3.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "stripe": "^17.0.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.20.1",
+    "eslint-config-next": "^16.0.0",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
