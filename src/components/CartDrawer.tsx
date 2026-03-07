@@ -80,7 +80,7 @@ export function CartDrawer({
 
           {/* Drawer */}
           <motion.aside
-            className="fixed right-0 top-16 bottom-0 w-full max-w-md border-l border-white/10 bg-[#0b0f14] shadow-2xl"
+            className="fixed right-0 top-16 bottom-0 w-full max-w-md rounded-tl-2xl border-l border-t border-white/10 bg-[#0b0f14]/98 shadow-2xl backdrop-blur-xl"
             initial={{x: 420, opacity: 0}}
             animate={{x: 0, opacity: 1}}
             exit={{x: 420, opacity: 0}}
