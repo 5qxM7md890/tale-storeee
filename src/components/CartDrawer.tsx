@@ -72,7 +72,7 @@ export function CartDrawer({
         >
           {/* Overlay: only below header so header doesn't get blocked */}
           <div
-            className="absolute left-0 right-0 bottom-0 top-16 bg-black/60"
+            className="absolute left-0 right-0 bottom-0 top-16 bg-black/55 backdrop-blur-[1px]"
             onPointerDown={onClose}
             onWheel={onOverlayWheel}
             onTouchMove={onOverlayTouchMove}
