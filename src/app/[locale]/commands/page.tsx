@@ -5,7 +5,7 @@ export default async function CommandsPage({params}: {params: Promise<{locale: s
   const {locale} = await params;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 md:py-14 space-y-6 sm:pl-[264px]">
+    <div className="mx-auto max-w-6xl px-4 py-10 space-y-6 md:py-14 sm:pl-[264px]">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Tale Commands</h1>
         <p className="mt-2 max-w-2xl text-sm text-white/60">
