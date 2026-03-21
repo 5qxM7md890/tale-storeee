@@ -1,0 +1,129 @@
+{
+  "nav": {
+    "home": "Home",
+    "commands": "Commands",
+    "pricing": "Pricing",
+    "support": "Support"
+  },
+  "auth": {
+    "login": "Login"
+  },
+  "user": {
+    "dashboard": "Dashboard",
+    "subscriptions": "Subscriptions",
+    "invoices": "Invoices",
+    "logout": "Logout"
+  },
+  "home": {
+    "badge": "Dashboard Version v.1",
+    "heroTitle": "Data that boosts the growth of your online business",
+    "heroSubtitle": "Boost your digital success with our smart solutions powered by data and effective reports.",
+    "getStarted": "Get started",
+    "support": "Support→",
+    "featuresLabel": "Features",
+    "cmsTitle": "Comprehensive Management System",
+    "cmsSubtitle": "Everything you need to manage your community with complete control and protection.",
+    "cards": {
+      "adminTitle": "Administrative Commands",
+      "adminDesc": "Powerful command system with custom shortcuts, permissions, and role-based access control.",
+      "adminBullets": [
+        "Custom command creation and shortcuts",
+        "Granular permission controls",
+        "Command usage logging and analytics"
+      ],
+      "voiceTitle": "Voice & Text Management",
+      "voiceBullets": [
+        "Dynamic voice room creation and management",
+        "Advanced text chat moderation tools",
+        "Automated content filtering and alerts"
+      ],
+      "protectTitle": "Complete Protection",
+      "protectBullets": [
+        "Role protection and verification",
+        "Attack prevention and detection",
+        "Anti-fake measures and identity verification"
+      ]
+    },
+    "showcase": {
+      "badge": "apps",
+      "body": "Reward active members with special level roles, privileged permissions, and channels as they reach a certain level!",
+      "cta": "Discover More",
+      "overview": {
+        "title": "Make your server speaks In numbers with Overview"
+      },
+      "messages": {
+        "title": "Customize your messages with the way you like"
+      },
+      "shadows": {
+        "title": "Guard your community In the shadows"
+      },
+      "roles": {
+        "title": "Make your server good with reaction roles"
+      }
+    },
+    "faq": {
+      "label": "FAQ",
+      "title": "Frequently Asked Questions",
+      "subtitle": "Find answers to common questions about ModGuard.",
+      "q1": "How does the role protection system work?",
+      "a1": "It monitors sensitive role changes and enforces protection rules to prevent unauthorized edits.",
+      "q2": "Can I create custom commands?",
+      "a2": "Yes—create custom commands/shortcuts and bind them to granular permissions.",
+      "q3": "What types of attacks can the system prevent?",
+      "a3": "It prevents common raid patterns, suspicious joins, role abuse, and permission escalations.",
+      "q4": "How does the anti-fake system work?",
+      "a4": "It detects impersonation patterns and blocks suspicious activity before it spreads.",
+      "q5": "Can I migrate from another moderation bot?",
+      "a5": "Yes—our team can help migrate settings and workflows depending on your setup."
+    },
+    "cta": {
+      "title": "Ready to protect your community?",
+      "subtitle": "Join thousands of communities already using ModGuard for comprehensive protection and management.",
+      "button": "Start Your Experience Now"
+    },
+    "hero": {
+      "title": "Data that boosts the growth of your online business",
+      "subtitle": "Boost your digital success with our smart solutions powered by data and effective reports.",
+      "ctaPrimary": "Get started",
+      "ctaSecondary": "Support →"
+    },
+    "features": {
+      "label": "Features",
+      "title": "Comprehensive Management System",
+      "subtitle": "Everything you need to manage your community with complete control and protection.",
+      "cards": {
+        "admin": {
+          "title": "Administrative Commands",
+          "desc": "Powerful command system with custom shortcuts, permissions, and role-based access control.",
+          "b1": "Custom command creation and shortcuts",
+          "b2": "Granular permission controls",
+          "b3": "Command usage logging and analytics"
+        },
+        "voice": {
+          "title": "Voice & Text Management",
+          "desc": "Complete control over voice rooms and text channels with advanced moderation tools.",
+          "b1": "Dynamic voice room creation and management",
+          "b2": "Advanced text chat moderation tools",
+          "b3": "Automated content filtering and alerts"
+        },
+        "protection": {
+          "title": "Complete Protection",
+          "desc": "Robust security features to protect your community from attacks and unauthorized access.",
+          "b1": "Role protection and verification",
+          "b2": "Attack prevention and detection",
+          "b3": "Anti-fake measures and identity verification"
+        }
+      }
+    }
+  },
+  "Nav": {
+    "home": "Home",
+    "commands": "Commands",
+    "pricing": "Pricing",
+    "support": "Support"
+  },
+  "commands": {
+    "title": "Tale Commands",
+    "subtitle": "Find the command you are looking for and how to use it."
+  }
+}
