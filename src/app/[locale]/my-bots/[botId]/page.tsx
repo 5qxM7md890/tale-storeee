@@ -1,3 +1,4 @@
+
 import {notFound, redirect} from 'next/navigation';
 import {getSession} from '@/lib/auth';
 import {prisma} from '@/lib/db';
@@ -16,9 +17,13 @@ type DiscordGuildOption = {
   permissions?: string;
 };
 
+function cx(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
+
 function resolveTab(value: string | undefined): TabKey {
   if (value === 'overview' || value === 'customize' || value === 'general') return value;
-  return 'overview';
+  return 'customize';
 }
 
 function formatStatus(value: string | null | undefined) {
@@ -81,19 +86,13 @@ function tabHref(botId: string, tab: TabKey) {
   return `/my-bots/${botId}?tab=${tab}`;
 }
 
-function statusChip(ok: boolean) {
-  return ok
-    ? 'border border-emerald-400/18 bg-emerald-500/[0.08] text-emerald-100'
-    : 'border border-white/8 bg-white/[0.03] text-white/60';
-}
-
 function renderNotice(
   status: {bind?: string; save?: string; appearance?: string; message?: string},
   t: ReturnType<typeof getText>
 ) {
   if (status.bind === 'success') {
     return {
-      tone: 'border-emerald-400/18 bg-emerald-500/[0.07] text-emerald-100',
+      tone: 'border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-100',
       title: t.noticeBindSuccess,
       body: status.message || t.noticeBindSuccessBody
     };
@@ -101,7 +100,7 @@ function renderNotice(
 
   if (status.bind === 'missing_server') {
     return {
-      tone: 'border-amber-400/18 bg-amber-500/[0.07] text-amber-100',
+      tone: 'border-amber-400/20 bg-amber-500/[0.08] text-amber-100',
       title: t.noticeMissingServer,
       body: status.message || t.noticeMissingServerBody
     };
@@ -109,7 +108,7 @@ function renderNotice(
 
   if (status.bind === 'error') {
     return {
-      tone: 'border-rose-400/18 bg-rose-500/[0.07] text-rose-100',
+      tone: 'border-rose-400/20 bg-rose-500/[0.08] text-rose-100',
       title: t.noticeBindError,
       body: status.message || t.noticeBindErrorBody
     };
@@ -117,7 +116,7 @@ function renderNotice(
 
   if (status.save === 'saved') {
     return {
-      tone: 'border-emerald-400/18 bg-emerald-500/[0.07] text-emerald-100',
+      tone: 'border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-100',
       title: t.noticeSaveSuccess,
       body: status.message || t.noticeSaveSuccessBody
     };
@@ -125,7 +124,7 @@ function renderNotice(
 
   if (status.save === 'error') {
     return {
-      tone: 'border-rose-400/18 bg-rose-500/[0.07] text-rose-100',
+      tone: 'border-rose-400/20 bg-rose-500/[0.08] text-rose-100',
       title: t.noticeSaveError,
       body: status.message || t.noticeSaveErrorBody
     };
@@ -133,7 +132,7 @@ function renderNotice(
 
   if (status.appearance === 'saved') {
     return {
-      tone: 'border-emerald-400/18 bg-emerald-500/[0.07] text-emerald-100',
+      tone: 'border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-100',
       title: t.noticeAppearanceSuccess,
       body: status.message || t.noticeAppearanceSuccessBody
     };
@@ -141,7 +140,7 @@ function renderNotice(
 
   if (status.appearance === 'error') {
     return {
-      tone: 'border-rose-400/18 bg-rose-500/[0.07] text-rose-100',
+      tone: 'border-rose-400/20 bg-rose-500/[0.08] text-rose-100',
       title: t.noticeAppearanceError,
       body: status.message || t.noticeAppearanceErrorBody
     };
@@ -156,15 +155,21 @@ function getText(locale: string) {
   return isAr
     ? {
         back: 'العودة إلى بوتاتي',
-        heroBody: 'مساحة عمل هادئة لهذا البوت، متمحورة حول التخصيص، المعاينة، والإعدادات الأساسية.',
         invite: 'دعوة البوت',
         openSetup: 'فتح الإعدادات',
-        saveChanges: 'حفظ التغييرات',
+        saveAppearance: 'حفظ التخصيص',
+        saveGeneral: 'حفظ الإعدادات',
+        saveBinding: 'تطبيق الربط',
         tabs: {
-          overview: {title: 'نظرة عامة', desc: 'ملخص هادئ للحالة والإجراءات'},
-          customize: {title: 'تخصيص البوت', desc: 'الاسم، الصور، الظهور، والمعاينة'},
+          overview: {title: 'نظرة عامة', desc: 'ملخص الحالة والإجراءات'},
+          customize: {title: 'تخصيص البوت', desc: 'الهوية، الصور، الحضور، والمعاينة'},
           general: {title: 'عام', desc: 'السيرفر، القنوات، والجاهزية'}
         },
+        workspaceTitle: 'تخصيص البوت',
+        workspaceBody: 'مساحة عمل هادئة لتحرير هوية البوت، إعدادات الحضور، وربط السيرفر لهذا الـ Bot Instance.',
+        notSet: 'غير مضبوط',
+        noServer: 'لم يتم اختيار سيرفر',
+        noBinding: 'غير مربوط',
         botIdentity: 'هوية البوت',
         currentPlan: 'الخطة الحالية',
         inviteStatus: 'حالة الدعوة',
@@ -173,56 +178,64 @@ function getText(locale: string) {
         boundServer: 'السيرفر المرتبط',
         runtimeReadiness: 'جاهزية التشغيل',
         setupReadiness: 'جاهزية الإعداد',
-        notSet: 'غير مضبوط',
-        noServer: 'لم يتم اختيار سيرفر',
-        noBinding: 'غير مربوط',
         inviteReady: 'رابط الدعوة جاهز',
         inviteMissing: 'رابط الدعوة غير متوفر',
         runtimeReady: 'جاهز للتشغيل',
-        runtimeMissing: 'توجد إعدادات ناقصة',
+        runtimeMissing: 'هناك قيم أساسية ناقصة',
         setupComplete: 'الإعدادات الأساسية مكتملة',
-        setupIncomplete: 'بعض الحقول الأساسية ناقصة',
-        currentSelectedServer: 'السيرفر المحدد لهذا البوت',
-        selectServer: 'اختر السيرفر لهذا البوت',
-        selectServerHint: 'الاختيار والربط يبقيان خاصين بهذا البوت نفسه فقط.',
-        bindButton: 'ربط بالسيرفر المحدد',
-        bindRuleTitle: 'قاعدة الربط',
-        bindRuleBody: 'يسمح لنفس السيرفر بأن يحتوي أنواعًا مختلفة من البوتات، لكن لا يسمح بتكرار نفس النوع على نفس السيرفر.',
-        sameTypeConflict: 'يوجد بالفعل بوت من نفس النوع مربوط على هذا السيرفر.',
-        generalSettings: 'الإعدادات العامة',
-        generalSettingsBody: 'هذه القيم هي التي يقرأها هذا البوت وقت التشغيل.',
-        mode: 'الوضع',
-        language: 'اللغة',
-        createChannel: 'معرّف قناة الإنشاء',
-        tempCategory: 'معرّف الفئة المؤقتة',
-        panelChannel: 'معرّف قناة اللوحة',
-        logsChannel: 'معرّف قناة السجلات',
-        defaultUserLimit: 'الحد الافتراضي للمستخدمين',
-        appearanceTitle: 'تخصيص البوت',
-        appearanceBody: 'عدّل الاسم، الصور، والحضور داخل مساحة تخصيص أقرب إلى المرجع وأكثر هدوءًا.',
+        setupIncomplete: 'هناك إعدادات أساسية ناقصة',
         displayName: 'اسم البوت',
         avatarImage: 'صورة البوت',
         bannerImage: 'بانر البوت',
         panelImage: 'صورة اللوحة',
+        imageUrl: 'رابط مباشر',
+        uploadFromDevice: 'رفع من الجهاز',
         statusText: 'نص الحالة',
         activityType: 'نوع النشاط',
-        uploadHint: 'يمكنك الرفع من الجهاز أو إدخال رابط مباشر.',
+        streamingOption: 'خيار البث',
+        streamingHint: 'اختر STREAMING إذا كنت تريد إظهار حالة بث.',
+        mediaAssets: 'الوسائط',
+        mediaAssetsBody: 'أدخل الروابط أو ارفع الصور مباشرة من نفس مساحة التحرير.',
+        presenceSection: 'الحضور والنشاط',
+        presenceBody: 'اضبط النص والنشاط كما سيظهران في ملف البوت.',
         previewTitle: 'المعاينة الحية',
-        bannerPreview: 'معاينة البانر',
-        panelPreview: 'معاينة صورة اللوحة',
-        statusPreview: 'معاينة الحالة',
-        activityPreview: 'معاينة النشاط',
-        appearanceQuickInfo: 'ملخص التخصيص',
-        readinessTitle: 'قائمة الجاهزية',
-        readinessBound: ['ربط السيرفر', 'تم ربط البوت بسيرفر صالح.', 'البوت يحتاج إلى ربط سيرفر.'],
-        readinessCreate: ['قناة الإنشاء', 'تم حفظ createChannel.', 'createChannel غير مضبوط.'],
-        readinessTemp: ['الفئة المؤقتة', 'تم حفظ tempCategory.', 'tempCategory غير مضبوطة.'],
-        readinessPanel: ['قناة اللوحة', 'تم حفظ panelChannel.', 'panelChannel غير مضبوط.'],
-        readinessLogs: ['قناة السجلات', 'تم حفظ logsChannel.', 'logsChannel غير مضبوط.'],
-        readinessImage: ['صورة اللوحة', 'تم ضبط صورة اللوحة.', 'صورة اللوحة غير مضبوطة.'],
+        previewBody: 'معاينة مباشرة لاسم البوت وصوره وحالته داخل الصفحة.',
+        profileCard: 'معاينة الملف الشخصي',
+        listCard: 'معاينة قائمة الأعضاء',
+        panelPreview: 'معاينة اللوحة',
         appearanceReady: 'مكتمل',
         appearanceMissing: 'ناقص',
-        modeVoiceHint: 'الوضع المستقر الحالي هو VOICE فقط.',
+        generalSettings: 'الإعدادات العامة',
+        generalSettingsBody: 'هذه القيم هي التي يقرأها هذا البوت وقت التشغيل.',
+        currentSelectedServer: 'السيرفر المحدد لهذا البوت',
+        selectServer: 'اختر السيرفر',
+        selectServerHint: 'الاختيار والحفظ والربط كلها تخص هذا البوت فقط.',
+        bindButton: 'ربط بالسيرفر المحدد',
+        bindRuleTitle: 'قاعدة الربط',
+        bindRuleBody: 'يسمح لنفس السيرفر بأن يحتوي أنواعًا مختلفة من البوتات، لكن لا يسمح بتكرار نفس النوع على نفس السيرفر.',
+        sameTypeConflict: 'يوجد بالفعل بوت من نفس النوع مربوط على هذا السيرفر.',
+        mode: 'الوضع',
+        language: 'اللغة',
+        createChannel: 'قناة الإنشاء',
+        tempCategory: 'الفئة المؤقتة',
+        panelChannel: 'قناة اللوحة',
+        logsChannel: 'قناة السجلات',
+        defaultUserLimit: 'الحد الافتراضي للمستخدمين',
+        overviewBody: 'ملخص هادئ للحالة، الربط، والجاهزية بدون ضجيج بصري.',
+        quickActions: 'إجراءات سريعة',
+        quickActionsBody: 'أهم الإجراءات لهذا البوت بشكل مضغوط.',
+        readinessTitle: 'قائمة الجاهزية',
+        readinessBound: ['ربط السيرفر', 'تم ربط البوت بسيرفر صالح.', 'البوت يحتاج إلى ربط سيرفر.'],
+        readinessCreate: ['قناة الإنشاء', 'تم ضبط createChannel.', 'createChannel غير مضبوط.'],
+        readinessTemp: ['الفئة المؤقتة', 'تم ضبط tempCategory.', 'tempCategory غير مضبوطة.'],
+        readinessPanel: ['قناة اللوحة', 'تم ضبط panelChannel.', 'panelChannel غير مضبوط.'],
+        readinessLogs: ['قناة السجلات', 'تم ضبط logsChannel.', 'logsChannel غير مضبوط.'],
+        readinessImage: ['صورة اللوحة', 'تم ضبط صورة اللوحة.', 'صورة اللوحة غير مضبوطة.'],
+        readyBadge: 'جاهز',
+        missingBadge: 'ناقص',
+        currentBoundGuild: 'السيرفر المرتبط حاليًا',
+        note: 'هذا التبويب يركز على مساحة التحرير، وليس على لوحات metrics.',
+        noPreview: 'لا توجد معاينة بعد',
         noticeBindSuccess: 'تم تحديث الربط',
         noticeBindSuccessBody: 'تم ربط البوت بالسيرفر المحدد بنجاح.',
         noticeMissingServer: 'لا يوجد سيرفر محدد',
@@ -237,48 +250,32 @@ function getText(locale: string) {
         noticeAppearanceSuccessBody: 'تم تحديث التخصيص بنجاح.',
         noticeAppearanceError: 'تعذر حفظ التخصيص',
         noticeAppearanceErrorBody: 'تحقق من الصور والقيم ثم أعد المحاولة.',
-        noPreview: 'لا توجد معاينة بعد',
-        streamingHint: 'اختر STREAMING إذا كنت تريد حالة بث.',
-        currentBoundGuild: 'السيرفر المرتبط حاليًا',
-        quickActions: 'إجراءات سريعة',
-        quickActionsBody: 'أهم الإجراءات لهذا البوت بشكل مختصر وهادئ.',
-        serverBinding: 'ربط السيرفر',
-        serverBindingBody: 'اختر السيرفر المناسب لهذا البوت ثم نفّذ الربط.',
-        mediaAssets: 'الصور والوسائط',
-        mediaAssetsBody: 'أضف صور الهوية والبانر والبانل بنفس الأسلوب الهادئ داخل المساحة نفسها.',
-        presenceSection: 'الحالة والنشاط',
-        presenceBody: 'اضبط نص الحالة ونوع النشاط كما سيظهران في ملف البوت.',
-        livePreviewBody: 'معاينة أقوى لهوية هذا البوت داخل Tale.',
-        imageUrl: 'رابط مباشر',
-        uploadFromDevice: 'رفع من الجهاز',
-        overviewBody: 'ملخص مركّز لهذا البوت يشمل الحالة، الربط، الجاهزية، والخطوات السريعة.',
-        selectedServerCardBody: 'السيرفر الذي تم اختياره لهذا البوت.',
-        boundServerCardBody: 'السيرفر المرتبط فعليًا لهذا البوت.',
-        runtimeCardBody: 'حالة الجاهزية الحالية مع الإعدادات المطلوبة.',
-        inviteCardBody: 'رابط الدعوة الخاص بهذا البوت.',
-        channelSection: 'القنوات والإعدادات',
-        channelSectionBody: 'قيم القنوات ومعاملات التشغيل الخاصة بهذا البوت.',
-        saveAppearance: 'حفظ التخصيص',
-        saveGeneral: 'حفظ الإعدادات',
-        readyBadge: 'جاهز',
-        missingBadge: 'ناقص',
-        liveWorkspace: 'مساحة التخصيص',
-        previewPane: 'لوحة المعاينة',
-        previewPaneBody: 'تجسيد بصري مباشر لاسم البوت وصوره وحالته داخل الصفحة.',
-        assetRowsBody: 'أسطر وسائط مترابطة بدل بطاقات منفصلة ثقيلة.',
-        supportNote: 'إعدادات الربط والحفظ تبقى كما هي بدون تغيير منطقي.'
+        selectedServerLabel: 'السيرفر المحدد',
+        boundServerLabel: 'السيرفر المرتبط',
+        runtimeLabel: 'الجاهزية',
+        inviteLabel: 'الدعوة',
+        setupLabel: 'الإعداد',
+        workspaceLabel: 'مساحة العمل',
+        boundLabel: 'الحالة',
+        inviteUnavailable: 'الرابط غير متوفر'
       }
     : {
         back: 'Back to My Bots',
-        heroBody: 'A calmer workspace for this bot, centered around customization, preview, and core setup.',
         invite: 'Invite Bot',
         openSetup: 'Open Setup',
-        saveChanges: 'Save Changes',
+        saveAppearance: 'Save Appearance',
+        saveGeneral: 'Save Settings',
+        saveBinding: 'Apply Binding',
         tabs: {
-          overview: {title: 'Overview', desc: 'Calm summary and actions'},
-          customize: {title: 'Customize Bot', desc: 'Name, assets, presence, and preview'},
+          overview: {title: 'Overview', desc: 'Status and actions'},
+          customize: {title: 'Customize Bot', desc: 'Identity, assets, presence, and preview'},
           general: {title: 'General', desc: 'Server, channels, and readiness'}
         },
+        workspaceTitle: 'Bot Customization',
+        workspaceBody: 'A calm workspace for this bot instance: identity, presence, assets, and server setup.',
+        notSet: 'Not set',
+        noServer: 'No server selected',
+        noBinding: 'Not bound',
         botIdentity: 'Bot Identity',
         currentPlan: 'Current Plan',
         inviteStatus: 'Invite Status',
@@ -287,56 +284,64 @@ function getText(locale: string) {
         boundServer: 'Bound Server',
         runtimeReadiness: 'Runtime Readiness',
         setupReadiness: 'Setup Readiness',
-        notSet: 'Not set',
-        noServer: 'No server selected',
-        noBinding: 'Not bound',
         inviteReady: 'Invite link is ready',
         inviteMissing: 'Invite link is missing',
         runtimeReady: 'Ready to run',
         runtimeMissing: 'Some required values are missing',
         setupComplete: 'Core setup is complete',
-        setupIncomplete: 'Some core fields are still missing',
-        currentSelectedServer: 'Selected server for this bot',
-        selectServer: 'Choose a server for this bot',
-        selectServerHint: 'Selection and binding remain scoped to this specific bot only.',
-        bindButton: 'Bind to selected server',
-        bindRuleTitle: 'Binding Rule',
-        bindRuleBody: 'Different bot types can share the same server, but the same bot type cannot be repeated on that server.',
-        sameTypeConflict: 'A bot of the same type is already bound to this server.',
-        generalSettings: 'General Settings',
-        generalSettingsBody: 'These values are what this bot reads at runtime.',
-        mode: 'Mode',
-        language: 'Language',
-        createChannel: 'Create Channel ID',
-        tempCategory: 'Temp Category ID',
-        panelChannel: 'Panel Channel ID',
-        logsChannel: 'Logs Channel ID',
-        defaultUserLimit: 'Default User Limit',
-        appearanceTitle: 'Bot Customization',
-        appearanceBody: 'Adjust the name, assets, and presence inside a quieter customization workspace closer to the reference.',
+        setupIncomplete: 'Some core values are still missing',
         displayName: 'Bot Name',
         avatarImage: 'Bot Avatar',
         bannerImage: 'Bot Banner',
         panelImage: 'Panel Image',
+        imageUrl: 'Direct URL',
+        uploadFromDevice: 'Upload from device',
         statusText: 'Status Text',
         activityType: 'Activity Type',
-        uploadHint: 'Upload from your device or enter a direct image URL.',
+        streamingOption: 'Streaming Option',
+        streamingHint: 'Choose STREAMING if you want a streaming presence.',
+        mediaAssets: 'Media Assets',
+        mediaAssetsBody: 'Paste direct URLs or upload files from the same editing flow.',
+        presenceSection: 'Presence & Activity',
+        presenceBody: 'Adjust how this bot appears in its Discord profile.',
         previewTitle: 'Live Preview',
-        bannerPreview: 'Banner Preview',
-        panelPreview: 'Panel Image Preview',
-        statusPreview: 'Status Preview',
-        activityPreview: 'Activity Preview',
-        appearanceQuickInfo: 'Appearance Summary',
-        readinessTitle: 'Readiness Checklist',
-        readinessBound: ['Guild binding', 'This bot is bound to a valid server.', 'This bot still needs a server binding.'],
-        readinessCreate: ['Create channel', 'createChannel is configured.', 'createChannel is not configured.'],
-        readinessTemp: ['Temp category', 'tempCategory is configured.', 'tempCategory is not configured.'],
-        readinessPanel: ['Panel channel', 'panelChannel is configured.', 'panelChannel is not configured.'],
-        readinessLogs: ['Logs channel', 'logsChannel is configured.', 'logsChannel is not configured.'],
-        readinessImage: ['Panel image', 'Panel image is configured.', 'Panel image is missing.'],
+        previewBody: 'A direct preview of the bot name, assets, and presence inside the page.',
+        profileCard: 'Profile Preview',
+        listCard: 'Member List Preview',
+        panelPreview: 'Panel Preview',
         appearanceReady: 'Complete',
         appearanceMissing: 'Missing',
-        modeVoiceHint: 'VOICE is the only stable mode for the current runtime.',
+        generalSettings: 'General Settings',
+        generalSettingsBody: 'These are the values this bot reads at runtime.',
+        currentSelectedServer: 'Selected server for this bot',
+        selectServer: 'Choose server',
+        selectServerHint: 'Selection, save, and binding remain scoped to this bot only.',
+        bindButton: 'Bind to selected server',
+        bindRuleTitle: 'Binding Rule',
+        bindRuleBody: 'Different bot types can share the same server, but the same bot type cannot be repeated on that server.',
+        sameTypeConflict: 'A bot of the same type is already bound to this server.',
+        mode: 'Mode',
+        language: 'Language',
+        createChannel: 'Create Channel',
+        tempCategory: 'Temp Category',
+        panelChannel: 'Panel Channel',
+        logsChannel: 'Logs Channel',
+        defaultUserLimit: 'Default User Limit',
+        overviewBody: 'A quiet summary of status, binding, and readiness without a busy dashboard feel.',
+        quickActions: 'Quick Actions',
+        quickActionsBody: 'The essential actions for this bot in a compact strip.',
+        readinessTitle: 'Readiness Checklist',
+        readinessBound: ['Guild binding', 'This bot is bound to a valid server.', 'This bot still needs a server binding.'],
+        readinessCreate: ['Create channel', 'createChannel is configured.', 'createChannel is missing.'],
+        readinessTemp: ['Temp category', 'tempCategory is configured.', 'tempCategory is missing.'],
+        readinessPanel: ['Panel channel', 'panelChannel is configured.', 'panelChannel is missing.'],
+        readinessLogs: ['Logs channel', 'logsChannel is configured.', 'logsChannel is missing.'],
+        readinessImage: ['Panel image', 'Panel image is configured.', 'Panel image is missing.'],
+        readyBadge: 'Ready',
+        missingBadge: 'Missing',
+        currentBoundGuild: 'Currently bound server',
+        note: 'This page behaves more like an editor workspace than a metrics dashboard.',
+        noPreview: 'No preview yet',
         noticeBindSuccess: 'Binding updated',
         noticeBindSuccessBody: 'The bot was bound to the selected server successfully.',
         noticeMissingServer: 'No server selected',
@@ -351,78 +356,34 @@ function getText(locale: string) {
         noticeAppearanceSuccessBody: 'Appearance settings were updated successfully.',
         noticeAppearanceError: 'Appearance save failed',
         noticeAppearanceErrorBody: 'Check the image fields and values, then try again.',
-        noPreview: 'No preview yet',
-        streamingHint: 'Choose STREAMING if you want a streaming presence.',
-        currentBoundGuild: 'Currently bound server',
-        quickActions: 'Quick Actions',
-        quickActionsBody: 'The key actions for this bot, kept compact and quiet.',
-        serverBinding: 'Server Binding',
-        serverBindingBody: 'Choose the correct server for this bot and then bind it.',
-        mediaAssets: 'Media Assets',
-        mediaAssetsBody: 'Add the identity, banner, and panel assets inside one connected flow.',
-        presenceSection: 'Presence & Activity',
-        presenceBody: 'Adjust the profile status text and activity type.',
-        livePreviewBody: 'A stronger visual preview of this Tale bot identity.',
-        imageUrl: 'Direct URL',
-        uploadFromDevice: 'Upload from device',
-        overviewBody: 'A compact view of this bot’s state, binding, readiness, and key actions.',
-        selectedServerCardBody: 'The server currently selected for this bot.',
-        boundServerCardBody: 'The server currently bound to this bot.',
-        runtimeCardBody: 'Current runtime readiness based on the required values.',
-        inviteCardBody: 'Invite link for this specific bot.',
-        channelSection: 'Channels & Behavior',
-        channelSectionBody: 'Runtime channel IDs and behavior settings for this bot.',
-        saveAppearance: 'Save Appearance',
-        saveGeneral: 'Save Settings',
-        readyBadge: 'Ready',
-        missingBadge: 'Missing',
-        liveWorkspace: 'Customization Workspace',
-        previewPane: 'Preview Pane',
-        previewPaneBody: 'A direct visual reflection of the bot name, assets, and presence inside the page.',
-        assetRowsBody: 'Connected asset rows instead of heavy isolated cards.',
-        supportNote: 'Binding and save logic stay intact with no behavior changes.'
+        selectedServerLabel: 'Selected',
+        boundServerLabel: 'Bound',
+        runtimeLabel: 'Runtime',
+        inviteLabel: 'Invite',
+        setupLabel: 'Setup',
+        workspaceLabel: 'Workspace',
+        boundLabel: 'Status',
+        inviteUnavailable: 'Invite unavailable'
       };
 }
 
-const shellCard =
-  'rounded-[30px] border border-white/7 bg-[linear-gradient(180deg,rgba(10,7,20,0.94),rgba(7,5,14,0.98))] shadow-[0_36px_120px_rgba(0,0,0,0.44)] backdrop-blur-xl';
-const workCard =
-  'rounded-[24px] border border-white/6 bg-[linear-gradient(180deg,rgba(15,10,28,0.9),rgba(11,8,21,0.94))]';
-const panelCard =
-  'rounded-[22px] border border-white/6 bg-white/[0.03] shadow-[0_14px_36px_rgba(0,0,0,0.16)]';
-const fieldClass =
-  'h-12 w-full rounded-[16px] border border-white/[0.06] bg-[#110c20]/90 px-4 text-sm text-white outline-none transition placeholder:text-white/28 focus:border-violet-300/22 focus:bg-[#161026]';
-const fileFieldClass =
-  'block w-full rounded-[16px] border border-white/[0.06] bg-[#110c20]/90 px-4 py-3 text-sm text-white/75 file:mr-3 file:rounded-[14px] file:border-0 file:bg-white/[0.08] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-white/[0.12]';
+const pageShell =
+  'relative overflow-hidden rounded-[34px] border border-white/12 bg-[linear-gradient(180deg,rgba(8,6,14,0.97),rgba(7,5,12,0.98))] shadow-[0_35px_120px_rgba(0,0,0,0.55)]';
+const workspaceSurface =
+  'relative overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(11,8,19,0.94),rgba(8,6,15,0.97))]';
+const subtleSurface = 'rounded-[24px] border border-white/7 bg-white/[0.025]';
+const quietInput =
+  'h-11 w-full rounded-[15px] border border-white/[0.08] bg-[#0d0a18] px-4 text-sm text-white outline-none transition placeholder:text-white/24 focus:border-white/16 focus:bg-[#120d21]';
+const quietSelect = quietInput + ' appearance-none pr-10';
+const quietFile =
+  'block w-full rounded-[15px] border border-white/[0.08] bg-[#0d0a18] px-4 py-3 text-sm text-white/75 file:ml-0 file:mr-3 file:rounded-[12px] file:border-0 file:bg-white/[0.08] file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white';
 const primaryButton =
-  'inline-flex h-11 items-center justify-center rounded-[16px] border border-violet-300/14 bg-violet-500/[0.12] px-5 text-sm font-semibold text-white transition hover:bg-violet-500/[0.18]';
+  'inline-flex h-11 items-center justify-center rounded-[15px] border border-white/10 bg-white/[0.08] px-5 text-sm font-semibold text-white transition hover:bg-white/[0.12]';
 const secondaryButton =
-  'inline-flex h-11 items-center justify-center rounded-[16px] border border-white/8 bg-white/[0.04] px-5 text-sm font-semibold text-white transition hover:bg-white/[0.07]';
-const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40';
+  'inline-flex h-11 items-center justify-center rounded-[15px] border border-white/8 bg-transparent px-5 text-sm font-semibold text-white/86 transition hover:bg-white/[0.04]';
+const tinyLabel = 'text-[11px] font-semibold uppercase tracking-[0.18em] text-white/36';
 
-function SectionHeader({
-  eyebrow,
-  title,
-  body,
-  compact
-}: {
-  eyebrow: string;
-  title: string;
-  body?: string;
-  compact?: boolean;
-}) {
-  return (
-    <div className={compact ? 'space-y-1' : 'space-y-1.5'}>
-      <p className={labelClass}>{eyebrow}</p>
-      <h2 className={compact ? 'text-base font-semibold text-white' : 'text-[1.05rem] font-semibold text-white'}>
-        {title}
-      </h2>
-      {body ? <p className="max-w-3xl text-sm leading-6 text-white/46">{body}</p> : null}
-    </div>
-  );
-}
-
-function SidebarNavItem({
+function NavTab({
   href,
   title,
   desc,
@@ -436,147 +397,158 @@ function SidebarNavItem({
   return (
     <Link
       href={href}
-      className={
-        'block rounded-[18px] px-3.5 py-3 transition ' +
-        (active
-          ? 'border border-violet-300/14 bg-violet-500/[0.10]'
-          : 'border border-transparent bg-transparent hover:border-white/7 hover:bg-white/[0.03]')
-      }
+      className={cx(
+        'group flex items-center gap-3 rounded-[16px] border px-3 py-3 transition',
+        active
+          ? 'border-white/14 bg-white/[0.08] text-white shadow-[0_0_0_1px_rgba(255,255,255,0.03)]'
+          : 'border-transparent text-white/62 hover:border-white/6 hover:bg-white/[0.03] hover:text-white/86'
+      )}
     >
-      <p className="text-sm font-semibold text-white">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-white/42">{desc}</p>
+      <span
+        className={cx(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] border text-sm font-semibold',
+          active ? 'border-white/14 bg-white/[0.09] text-white' : 'border-white/6 bg-white/[0.02] text-white/54'
+        )}
+      >
+        {title.charAt(0)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{title}</span>
+        <span className="mt-1 block truncate text-xs text-white/34 group-hover:text-white/42">{desc}</span>
+      </span>
     </Link>
   );
 }
 
-function CompactStat({
+function MicroStat({
   label,
   value,
-  body
+  tone = 'default'
 }: {
   label: string;
   value: string;
-  body: string;
+  tone?: 'default' | 'good' | 'warn';
 }) {
+  const toneClass =
+    tone === 'good'
+      ? 'border-emerald-400/22 bg-emerald-500/[0.08] text-emerald-100'
+      : tone === 'warn'
+        ? 'border-amber-400/18 bg-amber-500/[0.08] text-amber-100'
+        : 'border-white/8 bg-white/[0.03] text-white/84';
+
   return (
-    <div className="rounded-[18px] border border-white/6 bg-white/[0.03] px-4 py-3.5">
-      <p className={labelClass}>{label}</p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-white">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-white/46">{body}</p>
+    <div className={cx('rounded-[18px] border px-4 py-3', toneClass)}>
+      <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">{label}</p>
+      <p className="mt-2 truncate text-sm font-semibold">{value}</p>
     </div>
   );
 }
 
-function InfoRow({
-  label,
-  value,
-  mono
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-sm text-white/48">{label}</span>
-      <span
-        className={
-          'max-w-[58%] text-right text-sm text-white ' +
-          (mono ? 'break-all font-medium text-white/78' : 'break-words text-white/86')
-        }
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ReadinessItem({
+function ReadyRow({
   label,
   ok,
+  body,
   readyText,
-  missingText,
-  t
+  missingText
 }: {
   label: string;
   ok: boolean;
+  body: string;
   readyText: string;
   missingText: string;
-  t: ReturnType<typeof getText>;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-[18px] border border-white/6 bg-black/10 px-4 py-3.5">
+    <div className="flex items-start justify-between gap-4 border-b border-white/6 py-3 last:border-b-0 last:pb-0 first:pt-0">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-white/90">{label}</p>
-        <p className="mt-1 text-xs leading-5 text-white/44">{ok ? readyText : missingText}</p>
+        <p className="text-sm font-medium text-white/88">{label}</p>
+        <p className="mt-1 text-xs leading-5 text-white/40">{body}</p>
       </div>
       <span
-        className={
-          statusChip(ok) +
-          ' inline-flex min-w-[72px] items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold'
-        }
+        className={cx(
+          'inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+          ok
+            ? 'border-emerald-400/22 bg-emerald-500/[0.08] text-emerald-100'
+            : 'border-white/8 bg-white/[0.03] text-white/56'
+        )}
       >
-        {ok ? t.readyBadge : t.missingBadge}
+        {ok ? readyText : missingText}
       </span>
     </div>
   );
 }
 
-function UploadAssetRow({
+function SectionTitle({
+  eyebrow,
   title,
-  hint,
-  urlName,
-  urlValue,
-  fileName,
-  previewUrl,
-  previewAlt,
-  noPreviewLabel,
-  t
+  body
 }: {
+  eyebrow: string;
   title: string;
-  hint: string;
-  urlName: string;
-  urlValue: string;
-  fileName: string;
-  previewUrl: string;
-  previewAlt: string;
-  noPreviewLabel: string;
-  t: ReturnType<typeof getText>;
+  body?: string;
 }) {
   return (
-    <div className="rounded-[20px] border border-white/6 bg-black/10 px-4 py-4 sm:px-5">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_176px]">
-        <div className="min-w-0 space-y-3">
-          <div>
-            <p className="text-sm font-semibold text-white">{title}</p>
-            <p className="mt-1 text-sm leading-6 text-white/42">{hint}</p>
-          </div>
+    <div className="space-y-1.5">
+      <p className={tinyLabel}>{eyebrow}</p>
+      <h2 className="text-lg font-semibold text-white">{title}</h2>
+      {body ? <p className="max-w-3xl text-sm leading-6 text-white/44">{body}</p> : null}
+    </div>
+  );
+}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block space-y-2 sm:col-span-2">
-              <span className={labelClass}>{t.imageUrl}</span>
-              <input name={urlName} defaultValue={urlValue} className={fieldClass} placeholder="https://..." />
-            </label>
+function ImageFrame({src, label, ratio = 'square'}: {src?: string; label: string; ratio?: 'square' | 'banner' | 'panel'}) {
+  const ratioClass =
+    ratio === 'banner' ? 'aspect-[16/6]' : ratio === 'panel' ? 'aspect-[16/7]' : 'aspect-square';
 
-            <label className="block space-y-2 sm:col-span-2">
-              <span className={labelClass}>{t.uploadFromDevice}</span>
-              <input name={fileName} type="file" accept="image/*" className={fileFieldClass} />
-            </label>
-          </div>
-        </div>
+  return (
+    <div className="space-y-2">
+      <p className={tinyLabel}>{label}</p>
+      <div
+        className={cx(
+          'overflow-hidden rounded-[18px] border border-white/8 bg-[linear-gradient(180deg,rgba(18,14,32,0.98),rgba(10,8,20,0.98))]',
+          ratioClass
+        )}
+      >
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={label} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs text-white/28">{label}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
+function AssetRow({
+  label,
+  urlName,
+  fileName,
+  defaultValue,
+  placeholder,
+  uploadLabel,
+  urlLabel
+}: {
+  label: string;
+  urlName: string;
+  fileName: string;
+  defaultValue: string;
+  placeholder: string;
+  uploadLabel: string;
+  urlLabel: string;
+}) {
+  return (
+    <div className="border-b border-white/6 py-4 last:border-b-0 last:pb-0 first:pt-0">
+      <div className="mb-3 flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <div className="overflow-hidden rounded-[18px] border border-white/6 bg-[#120c22] aspect-[4/3]">
-            {previewUrl ? (
-              <img src={previewUrl} alt={previewAlt} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center px-4 text-center text-xs text-white/30">
-                {noPreviewLabel}
-              </div>
-            )}
-          </div>
+          <p className="text-sm font-medium text-white/88">{label}</p>
+          <p className="mt-1 text-xs text-white/34">{uploadLabel}</p>
         </div>
       </div>
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <input type="url" name={urlName} defaultValue={defaultValue} placeholder={placeholder} className={quietInput} />
+        <input type="file" name={fileName} accept="image/*" className={quietFile} />
+      </div>
+      <p className="mt-2 text-[11px] text-white/28">{urlLabel}</p>
     </div>
   );
 }
@@ -629,11 +601,6 @@ export default async function BotDetailsPage({
   const setupComplete = hasCreateChannel && hasTempCategory && hasPanelChannel && hasLogsChannel;
   const runtimeReady = isBound && setupComplete && hasPanelImage;
   const inviteReady = Boolean(bot.inviteUrl);
-  const previewStatus = statusText || t.notSet;
-  const planLabel = bot.Product?.name || t.notSet;
-  const periodLabel = bot.PricingOption?.periodMonths
-    ? `${bot.PricingOption.periodMonths} month${bot.PricingOption.periodMonths > 1 ? 's' : ''}`
-    : t.notSet;
   const notice = renderNotice(
     {
       bind: resolvedSearchParams?.bind,
@@ -652,629 +619,622 @@ export default async function BotDetailsPage({
     : null;
 
   const tabs: Array<{key: TabKey; title: string; desc: string}> = [
-    {key: 'overview', title: t.tabs.overview.title, desc: t.tabs.overview.desc},
     {key: 'customize', title: t.tabs.customize.title, desc: t.tabs.customize.desc},
+    {key: 'overview', title: t.tabs.overview.title, desc: t.tabs.overview.desc},
     {key: 'general', title: t.tabs.general.title, desc: t.tabs.general.desc}
   ];
 
-  const inviteButton = bot.inviteUrl ? (
-    <a href={bot.inviteUrl} target="_blank" rel="noreferrer" className={secondaryButton}>
-      {t.invite}
-    </a>
-  ) : (
-    <button type="button" disabled className={secondaryButton + ' cursor-not-allowed opacity-45'}>
-      {t.invite}
-    </button>
+  const planLabel = bot.Product?.name || t.notSet;
+  const planPeriod = bot.PricingOption?.periodMonths
+    ? `${bot.PricingOption.periodMonths} month${bot.PricingOption.periodMonths > 1 ? 's' : ''}`
+    : t.notSet;
+
+  const topButtons = (
+    <div className="flex flex-wrap items-center gap-2.5">
+      {bot.inviteUrl ? (
+        <a href={bot.inviteUrl} target="_blank" rel="noreferrer" className={secondaryButton}>
+          {t.invite}
+        </a>
+      ) : (
+        <button type="button" disabled className={cx(secondaryButton, 'cursor-not-allowed opacity-45')}>
+          {t.invite}
+        </button>
+      )}
+      <Link href={tabHref(botId, 'general')} className={primaryButton}>
+        {t.openSetup}
+      </Link>
+    </div>
   );
 
-  return (
-    <div dir={isAr ? 'rtl' : 'ltr'} className="mx-auto max-w-[1480px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <div className={shellCard + ' relative overflow-hidden px-3 py-3 sm:px-4 sm:py-4'}>
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(117,69,218,0.16),transparent_28%),radial-gradient(circle_at_left,rgba(55,31,108,0.2),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.015),transparent_24%)]" />
-        <div className="relative grid gap-4 xl:grid-cols-[236px_minmax(0,1fr)]">
-          <aside className="min-w-0">
-            <div className="rounded-[24px] border border-white/6 bg-white/[0.02] px-3 py-3">
-              <div className="rounded-[20px] border border-white/6 bg-[linear-gradient(180deg,rgba(25,17,48,0.9),rgba(13,10,26,0.96))] p-3.5">
+  const customizeTab = (
+    <div className={workspaceSurface + ' p-4 sm:p-5 lg:p-6'}>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(134,92,255,0.16),transparent_30%),radial-gradient(circle_at_left_center,rgba(84,48,164,0.12),transparent_36%)]" />
+      <div className="relative">
+        <div className="mb-5 flex flex-col gap-4 border-b border-white/7 pb-5 lg:flex-row lg:items-end lg:justify-between">
+          <SectionTitle eyebrow={t.workspaceLabel} title={t.workspaceTitle} body={t.workspaceBody} />
+          <div className="max-w-md rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/48">
+            {t.note}
+          </div>
+        </div>
+
+        <form action={saveBotAppearanceAction} encType="multipart/form-data" className="grid gap-5 xl:grid-cols-[214px_minmax(0,1fr)_244px]">
+          <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="botId" value={botId} />
+          <input type="hidden" name="returnTab" value="customize" />
+
+          <aside className="space-y-4">
+            <div className={subtleSurface + ' overflow-hidden p-3'}>
+              <p className={tinyLabel}>{t.listCard}</p>
+              <div className="mt-3 rounded-[18px] border border-white/8 bg-[#0d0a18] p-3">
                 <div className="flex items-center gap-3">
-                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[18px] border border-white/8 bg-[#161027]">
+                  <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-[15px] border border-white/10 bg-white/[0.04]">
                     {avatarImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={avatarImageUrl} alt={displayName} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white/78">
-                        {displayName.charAt(0).toUpperCase()}
+                      <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white/60">
+                        {displayName.charAt(0)}
                       </div>
                     )}
-                    <span className="absolute bottom-1.5 left-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#161027]" />
+                    <span className="absolute bottom-1 left-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0d0a18]" />
                   </div>
-
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-                    <p className="mt-0.5 truncate text-xs text-white/45">{planLabel}</p>
-                    <p className="mt-2 inline-flex rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[11px] text-white/62">
-                      {formatStatus(bot.status)}
-                    </p>
+                    <p className="mt-0.5 truncate text-xs text-white/40">#{bot.refCode || bot.id.slice(-6)}</p>
                   </div>
                 </div>
-
-                <div className="mt-4 overflow-hidden rounded-[18px] border border-white/6 bg-[#120c22]">
-                  <div className="aspect-[16/8] bg-[#17102d]">
-                    {bannerImageUrl ? (
-                      <img src={bannerImageUrl} alt={t.bannerPreview} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-xs text-white/28">
-                        {t.bannerPreview}
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-3 pb-3 pt-0">
-                    <div className="-mt-5 flex items-end gap-3">
-                      <div className="relative h-11 w-11 overflow-hidden rounded-[15px] border-[3px] border-[#120c22] bg-[#17102d]">
-                        {avatarImageUrl ? (
-                          <img src={avatarImageUrl} alt={displayName} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-white/78">
-                            {displayName.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <p className="mt-2 truncate text-sm font-semibold text-white">{displayName}</p>
-                    <p className="mt-1 truncate text-xs text-white/46">{previewStatus}</p>
-                  </div>
+                <div className="mt-3 rounded-[15px] border border-white/7 bg-white/[0.03] px-3 py-2">
+                  <p className="truncate text-xs text-white/74">{formatStatus(activityType)}</p>
                 </div>
               </div>
+            </div>
 
-              <nav className="mt-3 space-y-1.5">
-                {tabs.map((tab) => (
-                  <SidebarNavItem
-                    key={tab.key}
-                    href={tabHref(bot.id, tab.key)}
-                    title={tab.title}
-                    desc={tab.desc}
-                    active={tab.key === activeTab}
-                  />
-                ))}
-              </nav>
-
-              <div className="mt-3 rounded-[18px] border border-white/6 bg-white/[0.02] px-3.5 py-3">
-                <p className={labelClass}>{t.liveWorkspace}</p>
-                <p className="mt-2 text-xs leading-5 text-white/44">{t.supportNote}</p>
+            <div className={subtleSurface + ' overflow-hidden'}>
+              <p className={cx(tinyLabel, 'px-4 pt-4')}>{t.profileCard}</p>
+              <div className="mt-3 overflow-hidden border-t border-white/6">
+                <div className="relative aspect-[1/1.45] bg-[#0d0a18]">
+                  {bannerImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={bannerImageUrl} alt={t.bannerImage} className="absolute inset-0 h-full w-full object-cover opacity-95" />
+                  ) : (
+                    <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(135deg,rgba(163,138,255,0.3),rgba(72,48,150,0.18),rgba(8,6,15,0))]" />
+                  )}
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,6,16,0.1),rgba(8,6,16,0.68)_56%,rgba(8,6,16,0.98))]" />
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <div className="mx-auto w-full max-w-[172px] rounded-[20px] border border-white/8 bg-[#0e0b19]/88 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+                      <div className="mx-auto relative h-16 w-16 overflow-hidden rounded-[18px] border border-white/10 bg-white/[0.04]">
+                        {avatarImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarImageUrl} alt={displayName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white/60">
+                            {displayName.charAt(0)}
+                          </div>
+                        )}
+                        <span className="absolute bottom-1 left-1 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-[#0e0b19]" />
+                      </div>
+                      <p className="mt-3 truncate text-center text-sm font-semibold text-white">{displayName}</p>
+                      <p className="mt-1 truncate text-center text-xs text-white/36">PureBot0000</p>
+                      <div className="mt-4 rounded-[14px] border border-white/8 bg-white/[0.03] px-3 py-2 text-center text-xs text-white/68">
+                        {formatStatus(activityType)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </aside>
 
-          <main className="min-w-0">
-            <div className={workCard + ' overflow-hidden'}>
-              <div className="flex flex-col gap-4 border-b border-white/6 px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-2">
-                  <Link href="/my-bots" className="inline-flex items-center gap-2 text-sm text-white/52 transition hover:text-white/82">
-                    <span>←</span>
-                    <span>{t.back}</span>
-                  </Link>
-                  <div>
-                    <h1 className="text-[1.85rem] font-bold tracking-tight text-white sm:text-[2.2rem]">{displayName}</h1>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-white/46">{t.heroBody}</p>
+          <div className={subtleSurface + ' p-4 sm:p-5'}>
+            <div className="space-y-5">
+              <div className="border-b border-white/6 pb-4">
+                <p className={tinyLabel}>{t.botIdentity}</p>
+                <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px]">
+                  <input
+                    type="text"
+                    name="displayName"
+                    defaultValue={displayName}
+                    placeholder={t.displayName}
+                    className={quietInput}
+                  />
+                  <div className="rounded-[15px] border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-white/72">
+                    <p className="truncate font-medium text-white">{displayName}</p>
+                    <p className="mt-1 truncate text-xs text-white/36">{planLabel}</p>
                   </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5">
-                  {inviteButton}
-                  <Link href={tabHref(bot.id, 'general')} className={secondaryButton}>
-                    {t.openSetup}
-                  </Link>
                 </div>
               </div>
 
-              {notice ? (
-                <div className="px-5 pt-5 sm:px-6">
-                  <div className={`rounded-[18px] border px-4 py-3 ${notice.tone}`}>
-                    <p className="text-sm font-semibold">{notice.title}</p>
-                    <p className="mt-1 text-sm opacity-90">{notice.body}</p>
+              <div>
+                <SectionTitle eyebrow={t.mediaAssets} title={t.mediaAssets} body={t.mediaAssetsBody} />
+                <div className="mt-4">
+                  <AssetRow
+                    label={t.avatarImage}
+                    urlName="avatarImageUrl"
+                    fileName="avatarImageFile"
+                    defaultValue={avatarImageUrl}
+                    placeholder="https://"
+                    uploadLabel={t.uploadFromDevice}
+                    urlLabel={t.imageUrl}
+                  />
+                  <AssetRow
+                    label={t.bannerImage}
+                    urlName="bannerImageUrl"
+                    fileName="bannerImageFile"
+                    defaultValue={bannerImageUrl}
+                    placeholder="https://"
+                    uploadLabel={t.uploadFromDevice}
+                    urlLabel={t.imageUrl}
+                  />
+                  <AssetRow
+                    label={t.panelImage}
+                    urlName="panelImageUrl"
+                    fileName="panelImageFile"
+                    defaultValue={panelImageUrl}
+                    placeholder="https://"
+                    uploadLabel={t.uploadFromDevice}
+                    urlLabel={t.imageUrl}
+                  />
+                </div>
+              </div>
+
+              <div className="border-t border-white/6 pt-5">
+                <SectionTitle eyebrow={t.presenceSection} title={t.presenceSection} body={t.presenceBody} />
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  <input
+                    type="text"
+                    name="statusText"
+                    defaultValue={statusText}
+                    placeholder={t.statusText}
+                    className={quietInput}
+                  />
+                  <select name="activityType" defaultValue={activityType} className={quietSelect}>
+                    <option value="PLAYING">PLAYING</option>
+                    <option value="WATCHING">WATCHING</option>
+                    <option value="LISTENING">LISTENING</option>
+                    <option value="COMPETING">COMPETING</option>
+                    <option value="STREAMING">STREAMING</option>
+                  </select>
+                </div>
+                <div className="mt-3 rounded-[16px] border border-white/7 bg-white/[0.03] px-4 py-3 text-sm text-white/54">
+                  <span className="font-medium text-white/74">{t.streamingOption}:</span> {t.streamingHint}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/6 pt-5">
+                <div className="flex items-center gap-2 text-sm text-white/44">
+                  <span
+                    className={cx(
+                      'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                      avatarImageUrl && bannerImageUrl && panelImageUrl && statusText
+                        ? 'border-emerald-400/22 bg-emerald-500/[0.08] text-emerald-100'
+                        : 'border-white/8 bg-white/[0.03] text-white/56'
+                    )}
+                  >
+                    {avatarImageUrl && bannerImageUrl && panelImageUrl && statusText ? t.appearanceReady : t.appearanceMissing}
+                  </span>
+                </div>
+                <button type="submit" className={primaryButton}>
+                  {t.saveAppearance}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <aside className="space-y-4">
+            <div className={subtleSurface + ' p-4'}>
+              <SectionTitle eyebrow={t.previewTitle} title={t.previewTitle} body={t.previewBody} />
+              <div className="mt-4 space-y-4">
+                <ImageFrame src={avatarImageUrl} label={t.avatarImage} ratio="square" />
+                <ImageFrame src={bannerImageUrl} label={t.bannerImage} ratio="banner" />
+                <ImageFrame src={panelImageUrl} label={t.panelPreview} ratio="panel" />
+              </div>
+            </div>
+
+            <div className={subtleSurface + ' p-4'}>
+              <p className={tinyLabel}>{t.presenceSection}</p>
+              <div className="mt-3 space-y-3">
+                <div className="rounded-[17px] border border-white/8 bg-[#0d0a18] px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">{t.statusText}</p>
+                  <p className="mt-2 truncate text-sm font-medium text-white">{statusText || t.notSet}</p>
+                </div>
+                <div className="rounded-[17px] border border-white/8 bg-[#0d0a18] px-4 py-3">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/35">{t.activityType}</p>
+                  <p className="mt-2 truncate text-sm font-medium text-white">{formatStatus(activityType)}</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </form>
+      </div>
+    </div>
+  );
+
+  const overviewTab = (
+    <div className="space-y-5">
+      <div className={workspaceSurface + ' p-4 sm:p-5 lg:p-6'}>
+        <div className="grid gap-4 border-b border-white/7 pb-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
+          <SectionTitle eyebrow={t.tabs.overview.title} title={t.tabs.overview.title} body={t.overviewBody} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MicroStat label={t.inviteLabel} value={inviteReady ? t.inviteReady : t.inviteMissing} tone={inviteReady ? 'good' : 'warn'} />
+            <MicroStat label={t.runtimeLabel} value={runtimeReady ? t.runtimeReady : t.runtimeMissing} tone={runtimeReady ? 'good' : 'warn'} />
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)]">
+          <div className={subtleSurface + ' p-4 sm:p-5'}>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <MicroStat label={t.botIdentity} value={displayName} />
+              <MicroStat label={t.selectedServerLabel} value={selectedGuildName} />
+              <MicroStat label={t.boundServerLabel} value={currentBoundGuildName} />
+              <MicroStat label={t.setupLabel} value={setupComplete ? t.setupComplete : t.setupIncomplete} tone={setupComplete ? 'good' : 'warn'} />
+              <MicroStat label={t.boundLabel} value={isBound ? formatStatus(bot.status) : t.noBinding} tone={isBound ? 'good' : 'warn'} />
+              <MicroStat label={t.currentPlan} value={planLabel} />
+            </div>
+
+            <div className="mt-4 rounded-[20px] border border-white/8 bg-[#0d0a18]/90 p-4">
+              <p className={tinyLabel}>{t.quickActions}</p>
+              <p className="mt-2 text-sm leading-6 text-white/44">{t.quickActionsBody}</p>
+              <div className="mt-4 flex flex-wrap gap-2.5">
+                {topButtons}
+                <Link href={tabHref(botId, 'customize')} className={secondaryButton}>
+                  {t.tabs.customize.title}
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className={subtleSurface + ' p-4 sm:p-5'}>
+            <p className={tinyLabel}>{t.previewTitle}</p>
+            <div className="mt-4 overflow-hidden rounded-[22px] border border-white/8 bg-[#0d0a18]">
+              <div className="relative h-36">
+                {bannerImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={bannerImageUrl} alt={t.bannerImage} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full bg-[linear-gradient(135deg,rgba(169,139,255,0.3),rgba(86,50,164,0.18),rgba(8,6,16,0.92))]" />
+                )}
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,6,16,0.06),rgba(8,6,16,0.86))]" />
+                <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-[18px] border border-white/10 bg-white/[0.04]">
+                    {avatarImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarImageUrl} alt={displayName} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white/60">
+                        {displayName.charAt(0)}
+                      </div>
+                    )}
+                    <span className="absolute bottom-1 left-1 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-[#0d0a18]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-lg font-semibold text-white">{displayName}</p>
+                    <p className="mt-1 truncate text-sm text-white/48">{statusText || t.notSet}</p>
                   </div>
                 </div>
-              ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <div className="px-5 py-5 sm:px-6 sm:py-6">
-                {activeTab === 'overview' ? (
-                  <section className="space-y-5">
-                    <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
-                      <div className={panelCard + ' p-5 sm:p-6'}>
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                          <SectionHeader
-                            eyebrow={t.tabs.overview.title}
-                            title={t.quickActions}
-                            body={t.overviewBody}
-                          />
+      <div className={workspaceSurface + ' p-4 sm:p-5'}>
+        <SectionTitle eyebrow={t.readinessTitle} title={t.readinessTitle} />
+        <div className="mt-4 rounded-[22px] border border-white/8 bg-white/[0.02] px-4 py-3 sm:px-5 sm:py-4">
+          <ReadyRow
+            label={t.readinessBound[0]}
+            ok={isBound}
+            body={isBound ? t.readinessBound[1] : t.readinessBound[2]}
+            readyText={t.readyBadge}
+            missingText={t.missingBadge}
+          />
+          <ReadyRow
+            label={t.readinessCreate[0]}
+            ok={hasCreateChannel}
+            body={hasCreateChannel ? t.readinessCreate[1] : t.readinessCreate[2]}
+            readyText={t.readyBadge}
+            missingText={t.missingBadge}
+          />
+          <ReadyRow
+            label={t.readinessTemp[0]}
+            ok={hasTempCategory}
+            body={hasTempCategory ? t.readinessTemp[1] : t.readinessTemp[2]}
+            readyText={t.readyBadge}
+            missingText={t.missingBadge}
+          />
+          <ReadyRow
+            label={t.readinessPanel[0]}
+            ok={hasPanelChannel}
+            body={hasPanelChannel ? t.readinessPanel[1] : t.readinessPanel[2]}
+            readyText={t.readyBadge}
+            missingText={t.missingBadge}
+          />
+          <ReadyRow
+            label={t.readinessLogs[0]}
+            ok={hasLogsChannel}
+            body={hasLogsChannel ? t.readinessLogs[1] : t.readinessLogs[2]}
+            readyText={t.readyBadge}
+            missingText={t.missingBadge}
+          />
+          <ReadyRow
+            label={t.readinessImage[0]}
+            ok={hasPanelImage}
+            body={hasPanelImage ? t.readinessImage[1] : t.readinessImage[2]}
+            readyText={t.readyBadge}
+            missingText={t.missingBadge}
+          />
+        </div>
+      </div>
+    </div>
+  );
 
-                          <div className="flex flex-wrap gap-2.5">
-                            {inviteButton}
-                            <form action={bindBotToSelectedServerAction}>
-                              <input type="hidden" name="locale" value={locale} />
-                              <input type="hidden" name="botId" value={bot.id} />
-                              <input type="hidden" name="returnTab" value="overview" />
-                              <input type="hidden" name="selectedGuildId" value={selectedGuildId} />
-                              <button type="submit" className={primaryButton}>
-                                {t.bindButton}
-                              </button>
-                            </form>
-                            <Link href={tabHref(bot.id, 'customize')} className={secondaryButton}>
-                              {t.tabs.customize.title}
-                            </Link>
-                          </div>
-                        </div>
+  const generalTab = (
+    <div className="space-y-5">
+      <div className={workspaceSurface + ' p-4 sm:p-5 lg:p-6'}>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_340px]">
+          <div className={subtleSurface + ' p-4 sm:p-5'}>
+            <SectionTitle eyebrow={t.generalSettings} title={t.generalSettings} body={t.generalSettingsBody} />
 
-                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                          <CompactStat label={t.currentPlan} value={planLabel} body={periodLabel} />
-                          <CompactStat
-                            label={t.inviteStatus}
-                            value={inviteReady ? t.inviteReady : t.inviteMissing}
-                            body={t.inviteCardBody}
-                          />
-                          <CompactStat
-                            label={t.bindingStatus}
-                            value={isBound ? t.boundServer : t.noBinding}
-                            body={isBound ? currentBoundGuildName : t.boundServerCardBody}
-                          />
-                          <CompactStat
-                            label={t.runtimeReadiness}
-                            value={runtimeReady ? t.runtimeReady : t.runtimeMissing}
-                            body={t.runtimeCardBody}
-                          />
-                        </div>
+            <form action={saveBotSetupAction} className="mt-5 space-y-5">
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="botId" value={botId} />
+              <input type="hidden" name="returnTab" value="general" />
+              <input type="hidden" name="selectedGuildId" value={selectedGuildId} />
 
-                        <div className="mt-5 grid gap-3 xl:grid-cols-2">
-                          <ReadinessItem
-                            label={t.readinessBound[0]}
-                            ok={isBound}
-                            readyText={t.readinessBound[1]}
-                            missingText={t.readinessBound[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessCreate[0]}
-                            ok={hasCreateChannel}
-                            readyText={t.readinessCreate[1]}
-                            missingText={t.readinessCreate[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessTemp[0]}
-                            ok={hasTempCategory}
-                            readyText={t.readinessTemp[1]}
-                            missingText={t.readinessTemp[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessPanel[0]}
-                            ok={hasPanelChannel}
-                            readyText={t.readinessPanel[1]}
-                            missingText={t.readinessPanel[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessLogs[0]}
-                            ok={hasLogsChannel}
-                            readyText={t.readinessLogs[1]}
-                            missingText={t.readinessLogs[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessImage[0]}
-                            ok={hasPanelImage}
-                            readyText={t.readinessImage[1]}
-                            missingText={t.readinessImage[2]}
-                            t={t}
-                          />
-                        </div>
-                      </div>
+              <div className="grid gap-4 border-b border-white/6 pb-5 lg:grid-cols-2">
+                <div>
+                  <p className={tinyLabel}>{t.mode}</p>
+                  <select name="mode" defaultValue={bot.BotSetting?.mode || 'VOICE'} className={cx(quietSelect, 'mt-2')}>
+                    <option value="VOICE">VOICE</option>
+                  </select>
+                </div>
+                <div>
+                  <p className={tinyLabel}>{t.language}</p>
+                  <select name="language" defaultValue={bot.BotSetting?.language || locale || 'en'} className={cx(quietSelect, 'mt-2')}>
+                    <option value="ar">Arabic</option>
+                    <option value="en">English</option>
+                  </select>
+                </div>
+              </div>
 
-                      <div className="space-y-3">
-                        <div className={panelCard + ' p-5'}>
-                          <SectionHeader eyebrow={t.botIdentity} title={displayName} body={t.appearanceQuickInfo} compact />
-                          <div className="mt-4 space-y-3">
-                            <InfoRow label={t.statusPreview} value={previewStatus} />
-                            <InfoRow label={t.activityPreview} value={activityType} />
-                            <InfoRow label={t.selectedServer} value={selectedGuildName} />
-                            <InfoRow label={t.boundServer} value={isBound ? currentBoundGuildName : t.noBinding} />
-                          </div>
-                        </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className={tinyLabel}>{t.createChannel}</p>
+                  <input type="text" name="createChannel" defaultValue={bot.BotSetting?.createChannel || ''} className={cx(quietInput, 'mt-2')} />
+                </div>
+                <div>
+                  <p className={tinyLabel}>{t.tempCategory}</p>
+                  <input type="text" name="tempCategory" defaultValue={bot.BotSetting?.tempCategory || ''} className={cx(quietInput, 'mt-2')} />
+                </div>
+                <div>
+                  <p className={tinyLabel}>{t.panelChannel}</p>
+                  <input type="text" name="panelChannel" defaultValue={bot.BotSetting?.panelChannel || ''} className={cx(quietInput, 'mt-2')} />
+                </div>
+                <div>
+                  <p className={tinyLabel}>{t.logsChannel}</p>
+                  <input type="text" name="logsChannel" defaultValue={bot.BotSetting?.logsChannel || ''} className={cx(quietInput, 'mt-2')} />
+                </div>
+                <div className="sm:max-w-[220px]">
+                  <p className={tinyLabel}>{t.defaultUserLimit}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    name="defaultUserLimit"
+                    defaultValue={bot.BotSetting?.defaultUserLimit ?? 0}
+                    className={cx(quietInput, 'mt-2')}
+                  />
+                </div>
+              </div>
 
-                        <div className={panelCard + ' p-5'}>
-                          <SectionHeader eyebrow={t.currentSelectedServer} title={selectedGuildName} body={t.selectedServerCardBody} compact />
-                          <div className="mt-4 rounded-[16px] border border-white/6 bg-black/10 px-4 py-3 text-sm text-white/68">
-                            {selectedGuildId || t.noServer}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                ) : null}
+              <div className="border-t border-white/6 pt-5">
+                <button type="submit" className={primaryButton}>
+                  {t.saveGeneral}
+                </button>
+              </div>
+            </form>
+          </div>
 
-                {activeTab === 'customize' ? (
-                  <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-                    <form action={saveBotAppearanceAction} className={panelCard + ' overflow-hidden'}>
-                      <input type="hidden" name="locale" value={locale} />
-                      <input type="hidden" name="botId" value={bot.id} />
-                      <input type="hidden" name="returnTab" value="customize" />
+          <div className="space-y-4">
+            <div className={subtleSurface + ' p-4 sm:p-5'}>
+              <SectionTitle eyebrow={t.currentSelectedServer} title={t.currentSelectedServer} body={t.selectServerHint} />
+              <form action={bindBotToSelectedServerAction} className="mt-5 space-y-4">
+                <input type="hidden" name="locale" value={locale} />
+                <input type="hidden" name="botId" value={botId} />
+                <input type="hidden" name="returnTab" value="general" />
+                <select name="selectedGuildId" defaultValue={selectedGuildId} className={quietSelect}>
+                  <option value="">{t.selectServer}</option>
+                  {guildOptions.map((guild) => (
+                    <option key={guild.id} value={guild.id}>
+                      {guild.name}
+                    </option>
+                  ))}
+                </select>
+                <button type="submit" className={primaryButton}>
+                  {t.bindButton}
+                </button>
+              </form>
 
-                      <div className="px-5 py-5 sm:px-6 sm:py-6">
-                        <SectionHeader
-                          eyebrow={t.tabs.customize.title}
-                          title={t.appearanceTitle}
-                          body={t.appearanceBody}
-                        />
-                      </div>
+              <div className="mt-4 space-y-3">
+                <MicroStat label={t.selectedServer} value={selectedGuildName} />
+                <MicroStat label={t.currentBoundGuild} value={currentBoundGuildName} tone={isBound ? 'good' : 'warn'} />
+              </div>
 
-                      <div className="border-t border-white/6 px-5 py-5 sm:px-6">
-                        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-                          <div className="space-y-2">
-                            <span className={labelClass}>{t.displayName}</span>
-                            <input
-                              name="displayName"
-                              defaultValue={displayName}
-                              className={fieldClass}
-                              placeholder={t.displayName}
-                            />
-                          </div>
-
-                          <div className="rounded-[18px] border border-white/6 bg-black/10 px-4 py-3.5">
-                            <p className={labelClass}>{t.appearanceQuickInfo}</p>
-                            <div className="mt-3 space-y-2.5">
-                              <InfoRow label={t.activityPreview} value={activityType} />
-                              <InfoRow label={t.statusPreview} value={previewStatus} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-white/6 px-5 py-5 sm:px-6">
-                        <SectionHeader eyebrow={t.mediaAssets} title={t.mediaAssets} body={t.assetRowsBody} />
-                        <div className="mt-4 space-y-3">
-                          <UploadAssetRow
-                            title={t.avatarImage}
-                            hint={t.uploadHint}
-                            urlName="avatarImageUrl"
-                            urlValue={avatarImageUrl}
-                            fileName="avatarImageFile"
-                            previewUrl={avatarImageUrl}
-                            previewAlt={t.avatarImage}
-                            noPreviewLabel={t.noPreview}
-                            t={t}
-                          />
-                          <UploadAssetRow
-                            title={t.bannerImage}
-                            hint={t.uploadHint}
-                            urlName="bannerImageUrl"
-                            urlValue={bannerImageUrl}
-                            fileName="bannerImageFile"
-                            previewUrl={bannerImageUrl}
-                            previewAlt={t.bannerImage}
-                            noPreviewLabel={t.noPreview}
-                            t={t}
-                          />
-                          <UploadAssetRow
-                            title={t.panelImage}
-                            hint={t.uploadHint}
-                            urlName="panelImageUrl"
-                            urlValue={panelImageUrl}
-                            fileName="panelImageFile"
-                            previewUrl={panelImageUrl}
-                            previewAlt={t.panelImage}
-                            noPreviewLabel={t.noPreview}
-                            t={t}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="border-t border-white/6 px-5 py-5 sm:px-6">
-                        <SectionHeader eyebrow={t.presenceSection} title={t.presenceSection} body={t.presenceBody} />
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-                          <label className="block space-y-2 md:col-span-2">
-                            <span className={labelClass}>{t.statusText}</span>
-                            <input
-                              name="statusText"
-                              defaultValue={statusText}
-                              className={fieldClass}
-                              placeholder={t.statusText}
-                            />
-                          </label>
-
-                          <label className="block space-y-2">
-                            <span className={labelClass}>{t.activityType}</span>
-                            <select name="activityType" defaultValue={activityType} className={fieldClass}>
-                              <option value="PLAYING">PLAYING</option>
-                              <option value="LISTENING">LISTENING</option>
-                              <option value="WATCHING">WATCHING</option>
-                              <option value="COMPETING">COMPETING</option>
-                              <option value="STREAMING">STREAMING</option>
-                            </select>
-                          </label>
-
-                          <div className="rounded-[18px] border border-white/6 bg-black/10 px-4 py-3.5">
-                            <p className={labelClass}>{t.statusPreview}</p>
-                            <div className="mt-3 flex items-center gap-2.5">
-                              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-                              <span className="truncate text-sm text-white">{previewStatus}</span>
-                            </div>
-                            <p className="mt-2 text-xs leading-5 text-white/45">{t.streamingHint}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end border-t border-white/6 px-5 py-4 sm:px-6">
-                        <button type="submit" className={primaryButton}>
-                          {t.saveAppearance}
-                        </button>
-                      </div>
-                    </form>
-
-                    <aside className="min-w-0 xl:sticky xl:top-6 xl:self-start">
-                      <div className={panelCard + ' overflow-hidden'}>
-                        <div className="px-5 py-5 sm:px-6">
-                          <SectionHeader eyebrow={t.previewPane} title={t.previewTitle} body={t.previewPaneBody} />
-                        </div>
-
-                        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                          <div className="overflow-hidden rounded-[22px] border border-white/6 bg-[linear-gradient(180deg,rgba(17,12,31,0.96),rgba(11,8,20,0.98))]">
-                            <div className="aspect-[16/7] bg-[#17102d]">
-                              {bannerImageUrl ? (
-                                <img src={bannerImageUrl} alt={t.bannerPreview} className="h-full w-full object-cover" />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-xs text-white/28">
-                                  {t.bannerPreview}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="px-4 pb-4 pt-0">
-                              <div className="-mt-7 flex items-end justify-between gap-3">
-                                <div className="flex items-end gap-3">
-                                  <div className="relative h-16 w-16 overflow-hidden rounded-[18px] border-[4px] border-[#110c21] bg-[#1a1230]">
-                                    {avatarImageUrl ? (
-                                      <img src={avatarImageUrl} alt={displayName} className="h-full w-full object-cover" />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center text-xl font-semibold text-white/78">
-                                        {displayName.charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <span className="mb-2 inline-flex h-3 w-3 rounded-full bg-emerald-400" />
-                                </div>
-
-                                <span className="mb-2 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-[11px] text-white/64">
-                                  {activityType}
-                                </span>
-                              </div>
-
-                              <div className="mt-3">
-                                <p className="text-lg font-semibold text-white">{displayName}</p>
-                                <p className="mt-1 text-sm text-white/52">{previewStatus}</p>
-                              </div>
-
-                              <div className="mt-4 overflow-hidden rounded-[18px] border border-white/6 bg-[#151026]">
-                                <div className="aspect-[16/9]">
-                                  {panelImageUrl ? (
-                                    <img src={panelImageUrl} alt={t.panelPreview} className="h-full w-full object-cover" />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-sm text-white/28">
-                                      {t.noPreview}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="mt-4 space-y-2.5 rounded-[18px] border border-white/6 bg-black/10 px-4 py-3.5">
-                                <InfoRow label={t.displayName} value={displayName} />
-                                <InfoRow label={t.statusPreview} value={previewStatus} />
-                                <InfoRow label={t.activityPreview} value={activityType} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </aside>
-                  </section>
-                ) : null}
-
-                {activeTab === 'general' ? (
-                  <section className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
-                    <div className={panelCard + ' overflow-hidden'}>
-                      <div className="px-5 py-5 sm:px-6">
-                        <SectionHeader
-                          eyebrow={t.tabs.general.title}
-                          title={t.serverBinding}
-                          body={t.serverBindingBody}
-                        />
-
-                        <form action={bindBotToSelectedServerAction} className="mt-5 space-y-4">
-                          <input type="hidden" name="locale" value={locale} />
-                          <input type="hidden" name="botId" value={bot.id} />
-                          <input type="hidden" name="returnTab" value="general" />
-
-                          <label className="block space-y-2">
-                            <span className={labelClass}>{t.selectServer}</span>
-                            <select name="selectedGuildId" defaultValue={selectedGuildId} className={fieldClass}>
-                              <option value="">{t.noServer}</option>
-                              {guildOptions.map((guild) => (
-                                <option key={guild.id} value={guild.id}>
-                                  {guild.name} — {guild.id}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="rounded-[16px] border border-white/6 bg-black/10 px-4 py-3 text-sm text-white/66">
-                              {selectedGuildId || t.noServer}
-                            </div>
-                            <button type="submit" className={primaryButton}>
-                              {t.bindButton}
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-
-                      <div className="border-t border-white/6 px-5 py-5 sm:px-6">
-                        <form action={saveBotSetupAction} className="space-y-5">
-                          <input type="hidden" name="locale" value={locale} />
-                          <input type="hidden" name="botId" value={bot.id} />
-                          <input type="hidden" name="returnTab" value="general" />
-
-                          <SectionHeader
-                            eyebrow={t.channelSection}
-                            title={t.generalSettings}
-                            body={t.channelSectionBody}
-                          />
-
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <label className="block space-y-2">
-                              <span className={labelClass}>{t.mode}</span>
-                              <select name="mode" defaultValue={bot.BotSetting?.mode || 'VOICE'} className={fieldClass}>
-                                <option value="VOICE">VOICE</option>
-                              </select>
-                              <span className="text-xs text-white/38">{t.modeVoiceHint}</span>
-                            </label>
-
-                            <label className="block space-y-2">
-                              <span className={labelClass}>{t.language}</span>
-                              <select name="language" defaultValue={bot.BotSetting?.language || 'en'} className={fieldClass}>
-                                <option value="en">English</option>
-                                <option value="ar">العربية</option>
-                              </select>
-                            </label>
-
-                            <label className="block space-y-2">
-                              <span className={labelClass}>{t.createChannel}</span>
-                              <input
-                                name="createChannel"
-                                defaultValue={bot.BotSetting?.createChannel || ''}
-                                className={fieldClass}
-                                placeholder="123456789012345678"
-                                inputMode="numeric"
-                              />
-                            </label>
-
-                            <label className="block space-y-2">
-                              <span className={labelClass}>{t.tempCategory}</span>
-                              <input
-                                name="tempCategory"
-                                defaultValue={bot.BotSetting?.tempCategory || ''}
-                                className={fieldClass}
-                                placeholder="123456789012345678"
-                                inputMode="numeric"
-                              />
-                            </label>
-
-                            <label className="block space-y-2">
-                              <span className={labelClass}>{t.panelChannel}</span>
-                              <input
-                                name="panelChannel"
-                                defaultValue={bot.BotSetting?.panelChannel || ''}
-                                className={fieldClass}
-                                placeholder="123456789012345678"
-                                inputMode="numeric"
-                              />
-                            </label>
-
-                            <label className="block space-y-2">
-                              <span className={labelClass}>{t.logsChannel}</span>
-                              <input
-                                name="logsChannel"
-                                defaultValue={bot.BotSetting?.logsChannel || ''}
-                                className={fieldClass}
-                                placeholder="123456789012345678"
-                                inputMode="numeric"
-                              />
-                            </label>
-
-                            <label className="block space-y-2 md:col-span-2">
-                              <span className={labelClass}>{t.defaultUserLimit}</span>
-                              <input
-                                name="defaultUserLimit"
-                                type="number"
-                                min="0"
-                                defaultValue={bot.BotSetting?.defaultUserLimit ?? 0}
-                                className={fieldClass}
-                              />
-                            </label>
-                          </div>
-
-                          <div className="flex justify-end">
-                            <button type="submit" className={primaryButton}>
-                              {t.saveGeneral}
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className={panelCard + ' p-5'}>
-                        <SectionHeader eyebrow={t.bindingStatus} title={isBound ? t.boundServer : t.noBinding} body={t.bindRuleBody} compact />
-                        <div className="mt-4 space-y-3">
-                          <InfoRow label={t.selectedServer} value={selectedGuildName} />
-                          <InfoRow label={t.currentBoundGuild} value={isBound ? currentBoundGuildName : t.noBinding} />
-                        </div>
-                        {conflictingSameTypeBot ? (
-                          <div className="mt-4 rounded-[16px] border border-amber-400/18 bg-amber-500/[0.07] px-4 py-3 text-sm text-amber-100">
-                            {t.sameTypeConflict}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className={panelCard + ' p-5'}>
-                        <SectionHeader eyebrow={t.readinessTitle} title={t.runtimeReadiness} body={t.runtimeCardBody} compact />
-                        <div className="mt-4 space-y-3">
-                          <ReadinessItem
-                            label={t.readinessBound[0]}
-                            ok={isBound}
-                            readyText={t.readinessBound[1]}
-                            missingText={t.readinessBound[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessCreate[0]}
-                            ok={hasCreateChannel}
-                            readyText={t.readinessCreate[1]}
-                            missingText={t.readinessCreate[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessTemp[0]}
-                            ok={hasTempCategory}
-                            readyText={t.readinessTemp[1]}
-                            missingText={t.readinessTemp[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessPanel[0]}
-                            ok={hasPanelChannel}
-                            readyText={t.readinessPanel[1]}
-                            missingText={t.readinessPanel[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessLogs[0]}
-                            ok={hasLogsChannel}
-                            readyText={t.readinessLogs[1]}
-                            missingText={t.readinessLogs[2]}
-                            t={t}
-                          />
-                          <ReadinessItem
-                            label={t.readinessImage[0]}
-                            ok={hasPanelImage}
-                            readyText={t.readinessImage[1]}
-                            missingText={t.readinessImage[2]}
-                            t={t}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </section>
+              <div className="mt-4 rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3 text-sm leading-6 text-white/44">
+                <p className="font-medium text-white/76">{t.bindRuleTitle}</p>
+                <p className="mt-1">{t.bindRuleBody}</p>
+                {conflictingSameTypeBot ? (
+                  <p className="mt-2 text-amber-200/90">{t.sameTypeConflict}</p>
                 ) : null}
               </div>
             </div>
-          </main>
+
+            <div className={subtleSurface + ' p-4 sm:p-5'}>
+              <SectionTitle eyebrow={t.readinessTitle} title={t.readinessTitle} />
+              <div className="mt-4">
+                <ReadyRow
+                  label={t.readinessBound[0]}
+                  ok={isBound}
+                  body={isBound ? t.readinessBound[1] : t.readinessBound[2]}
+                  readyText={t.readyBadge}
+                  missingText={t.missingBadge}
+                />
+                <ReadyRow
+                  label={t.readinessCreate[0]}
+                  ok={hasCreateChannel}
+                  body={hasCreateChannel ? t.readinessCreate[1] : t.readinessCreate[2]}
+                  readyText={t.readyBadge}
+                  missingText={t.missingBadge}
+                />
+                <ReadyRow
+                  label={t.readinessTemp[0]}
+                  ok={hasTempCategory}
+                  body={hasTempCategory ? t.readinessTemp[1] : t.readinessTemp[2]}
+                  readyText={t.readyBadge}
+                  missingText={t.missingBadge}
+                />
+                <ReadyRow
+                  label={t.readinessPanel[0]}
+                  ok={hasPanelChannel}
+                  body={hasPanelChannel ? t.readinessPanel[1] : t.readinessPanel[2]}
+                  readyText={t.readyBadge}
+                  missingText={t.missingBadge}
+                />
+                <ReadyRow
+                  label={t.readinessLogs[0]}
+                  ok={hasLogsChannel}
+                  body={hasLogsChannel ? t.readinessLogs[1] : t.readinessLogs[2]}
+                  readyText={t.readyBadge}
+                  missingText={t.missingBadge}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const shellContent = activeTab === 'overview' ? overviewTab : activeTab === 'general' ? generalTab : customizeTab;
+
+  return (
+    <div dir={isAr ? 'rtl' : 'ltr'} className="min-h-screen bg-[#030108] text-white">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(69,44,140,0.2),transparent_28%),radial-gradient(circle_at_top_left,rgba(146,92,255,0.12),transparent_24%),linear-gradient(90deg,rgba(255,255,255,0.025)_0,rgba(255,255,255,0.01)_10%,transparent_24%,transparent_76%,rgba(255,255,255,0.01)_90%,rgba(255,255,255,0.025)_100%)] opacity-80" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(7,5,15,0),rgba(3,1,8,0.88)_74%)]" />
+      </div>
+
+      <div className="relative mx-auto max-w-[1460px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+
+        <div
+          className={cx(
+            'grid gap-3 xl:gap-4',
+            isAr ? 'xl:grid-cols-[minmax(0,1fr)_228px]' : 'xl:grid-cols-[228px_minmax(0,1fr)]'
+          )}
+        >
+          {isAr ? (
+            <>
+              <main className={pageShell + ' px-4 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6'}>
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(144,96,255,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.018),transparent_18%)]" />
+                <div className="relative">
+                  <div className="mb-5 flex flex-col gap-4 border-b border-white/7 pb-5 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-3">
+                      <Link href="/my-bots" className="inline-flex items-center gap-2 text-sm text-white/52 transition hover:text-white/82">
+                        <span aria-hidden="true">←</span>
+                        {t.back}
+                      </Link>
+                      <div>
+                        <h1 className="text-[2rem] font-semibold tracking-[-0.03em] text-white sm:text-[2.35rem]">
+                          {activeTab === 'customize'
+                            ? t.tabs.customize.title
+                            : activeTab === 'overview'
+                              ? t.tabs.overview.title
+                              : t.tabs.general.title}
+                        </h1>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/40">{t.workspaceBody}</p>
+                      </div>
+                    </div>
+                    {topButtons}
+                  </div>
+
+                  {notice ? (
+                    <div className={cx('mb-4 rounded-[16px] border px-4 py-3', notice.tone)}>
+                      <p className="text-sm font-semibold">{notice.title}</p>
+                      <p className="mt-1 text-sm opacity-90">{notice.body}</p>
+                    </div>
+                  ) : null}
+
+                  {shellContent}
+                </div>
+              </main>
+
+              <SidebarShell
+                botId={botId}
+                tabs={tabs}
+                activeTab={activeTab}
+                displayName={displayName}
+                avatarImageUrl={avatarImageUrl}
+                bannerImageUrl={bannerImageUrl}
+                activityType={activityType}
+                planLabel={planLabel}
+                planPeriod={planPeriod}
+                selectedGuildName={selectedGuildName}
+                currentBoundGuildName={currentBoundGuildName}
+                isBound={isBound}
+                t={t}
+              />
+            </>
+          ) : (
+            <>
+              <SidebarShell
+                botId={botId}
+                tabs={tabs}
+                activeTab={activeTab}
+                displayName={displayName}
+                avatarImageUrl={avatarImageUrl}
+                bannerImageUrl={bannerImageUrl}
+                activityType={activityType}
+                planLabel={planLabel}
+                planPeriod={planPeriod}
+                selectedGuildName={selectedGuildName}
+                currentBoundGuildName={currentBoundGuildName}
+                isBound={isBound}
+                t={t}
+              />
+
+              <main className={pageShell + ' px-4 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6'}>
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(144,96,255,0.12),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.018),transparent_18%)]" />
+                <div className="relative">
+                  <div className="mb-5 flex flex-col gap-4 border-b border-white/7 pb-5 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-3">
+                      <Link href="/my-bots" className="inline-flex items-center gap-2 text-sm text-white/52 transition hover:text-white/82">
+                        <span aria-hidden="true">←</span>
+                        {t.back}
+                      </Link>
+                      <div>
+                        <h1 className="text-[2rem] font-semibold tracking-[-0.03em] text-white sm:text-[2.35rem]">
+                          {activeTab === 'customize'
+                            ? t.tabs.customize.title
+                            : activeTab === 'overview'
+                              ? t.tabs.overview.title
+                              : t.tabs.general.title}
+                        </h1>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-white/40">{t.workspaceBody}</p>
+                      </div>
+                    </div>
+                    {topButtons}
+                  </div>
+
+                  {notice ? (
+                    <div className={cx('mb-4 rounded-[16px] border px-4 py-3', notice.tone)}>
+                      <p className="text-sm font-semibold">{notice.title}</p>
+                      <p className="mt-1 text-sm opacity-90">{notice.body}</p>
+                    </div>
+                  ) : null}
+
+                  {shellContent}
+                </div>
+              </main>
+            </>
+          )}
         </div>
       </div>
     </div>
