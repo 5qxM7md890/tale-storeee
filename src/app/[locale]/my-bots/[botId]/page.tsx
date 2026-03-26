@@ -680,7 +680,7 @@ export default async function BotDetailsPage({
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-white">{displayName}</p>
-                    <p className="mt-0.5 truncate text-xs text-white/40">#{bot.refCode || bot.id.slice(-6)}</p>
+                    <p className="mt-0.5 truncate text-xs text-white/40">#{bot.id.slice(-6)}</p>
                   </div>
                 </div>
                 <div className="mt-3 rounded-[15px] border border-white/7 bg-white/[0.03] px-3 py-2">
