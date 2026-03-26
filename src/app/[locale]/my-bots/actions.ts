@@ -44,7 +44,7 @@ function readInteger(formData: FormData, key: string, fallback = 0) {
   return parsed;
 }
 
-function isDiscordId(value: string | null) {
+function isDiscordId(value: string | null): value is string {
   if (!value) return false;
   return /^\d{16,22}$/.test(value);
 }
