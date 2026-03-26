@@ -1,7 +1,6 @@
 'use server';
 
 import {randomUUID} from 'crypto';
-import {cookies} from 'next/headers';
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 import {BotInventoryStatus, Prisma, SlotStatus, SubscriptionStatus} from '@prisma/client';
@@ -125,13 +124,13 @@ async function getUserGuildOptions(userId: string): Promise<DiscordGuildOption[]
   }
 }
 
-function getPublicBindErrorMessage(error: unknown) {
+function getPublicMutationErrorMessage(error: unknown, fallbackMessage: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
-      return 'A binding record for this server already exists. This usually means a bot of the same type is already linked here.';
+      return 'A bot of this type is already linked to the selected server. Only one bot of each type is allowed per server.';
     }
     if (error.code === 'P2025') {
-      return 'A required bot, slot, or binding record could not be found while saving.';
+      return 'A required bot, setup, or binding record could not be found while saving.';
     }
   }
 
@@ -139,7 +138,7 @@ function getPublicBindErrorMessage(error: unknown) {
     return error.message.slice(0, 220);
   }
 
-  return 'The server binding could not be saved right now. Please review the selected server and try again.';
+  return fallbackMessage;
 }
 
 
@@ -402,20 +401,17 @@ export async function bindBotToSelectedServerAction(formData: FormData) {
   }
 
   const detailPath = getDetailPath(locale, botId);
-  const cookieStore = await cookies();
-  const cookieGuildId = cookieStore.get('active_guild_id')?.value ?? null;
-  const selectedGuildFromForm = readNullableText(formData, 'selectedGuildId');
-  const chosenGuildId = isDiscordId(selectedGuildFromForm) ? selectedGuildFromForm : cookieGuildId;
+  const selectedGuildIdFromForm = readNullableText(formData, 'selectedGuildId');
 
-  if (typeof chosenGuildId !== 'string' || !isDiscordId(chosenGuildId)) {
+  if (!isDiscordId(selectedGuildIdFromForm)) {
     redirect(buildRoute(detailPath, {
       tab: returnTab,
       bind: 'missing_server',
-      message: 'No selected server found. Please select a server first.'
+      message: 'No selected server found for this bot. Please choose a server in this bot page first.'
     }));
   }
 
-  const selectedGuildId: string = chosenGuildId;
+  const selectedGuildId: string = selectedGuildIdFromForm;
 
   const accessibleGuilds = await getUserGuildOptions(session.userId);
   if (accessibleGuilds.length > 0 && !accessibleGuilds.some((guild) => guild.id === selectedGuildId)) {
@@ -442,58 +438,33 @@ export async function bindBotToSelectedServerAction(formData: FormData) {
   }
 
   const now = new Date();
+  let failureMessage: string | null = null;
 
   try {
     await prisma.$transaction(async (tx) => {
-      const conflictingByInstance = await tx.botInstance.findFirst({
+      const conflictingBinding = await tx.guildBinding.findFirst({
         where: {
-          productId: bot.productId,
           guildId: selectedGuildId,
-          NOT: {id: bot.id}
+          productId: bot.productId,
+          NOT: {botInstanceId: bot.id}
         },
-        include: {Product: true}
+        include: {
+          Product: true
+        }
       });
 
-      if (conflictingByInstance) {
+      if (conflictingBinding) {
         throw new Error(
-          `A ${conflictingByInstance.Product?.name || 'bot of this type'} is already bound to this server. Only one bot of each type is allowed per server.`
+          `A ${conflictingBinding.Product?.name || 'bot of this type'} is already linked to this server. Only one bot of each type is allowed per server.`
         );
       }
 
-      const conflictingBindings = await tx.guildBinding.findMany({
-        where: {
-          guildId: selectedGuildId,
-          NOT: {botInstanceId: bot.id}
-        },
-        select: {botInstanceId: true}
-      });
-
-      if (conflictingBindings.length > 0) {
-        const conflictingBot = await tx.botInstance.findFirst({
-          where: {
-            id: {in: conflictingBindings.map((row) => row.botInstanceId)},
-            productId: bot.productId,
-            NOT: {id: bot.id}
-          },
-          include: {Product: true}
-        });
-
-        if (conflictingBot) {
-          throw new Error(
-            `This server already has ${conflictingBot.Product?.name || 'another bot of this type'} linked to it. Choose a different server or reuse the existing bot.`
-          );
-        }
-      }
-
-      const existingBinding = await tx.guildBinding.findFirst({
-        where: {botInstanceId: bot.id}
-      });
-
-      if (existingBinding) {
+      if (bot.GuildBinding) {
         await tx.guildBinding.update({
-          where: {id: existingBinding.id},
+          where: {botInstanceId: bot.id},
           data: {
             userId: session.userId,
+            productId: bot.productId,
             guildId: selectedGuildId,
             updatedAt: now
           }
@@ -504,6 +475,7 @@ export async function bindBotToSelectedServerAction(formData: FormData) {
             id: newId('guildbinding'),
             botInstanceId: bot.id,
             userId: session.userId,
+            productId: bot.productId,
             guildId: selectedGuildId,
             updatedAt: now
           } satisfies Prisma.GuildBindingUncheckedCreateInput
@@ -527,31 +499,38 @@ export async function bindBotToSelectedServerAction(formData: FormData) {
         });
       }
     });
-
-    revalidatePath(`/${locale}/my-bots`);
-    revalidatePath(detailPath);
-    redirect(buildRoute(detailPath, {
-      tab: returnTab,
-      bind: 'success',
-      message: 'The bot was bound to the selected server successfully.'
-    }));
   } catch (error) {
-    const message = getPublicBindErrorMessage(error);
+    failureMessage = getPublicMutationErrorMessage(
+      error,
+      'The bot could not be bound to the selected server right now.'
+    );
+
     console.error('bindBotToSelectedServerAction failed', {
       botId,
       userId: session.userId,
       selectedGuildId,
-      message,
+      message: failureMessage,
       error
     });
+  }
 
+  if (failureMessage) {
     redirect(buildRoute(detailPath, {
       tab: returnTab,
       bind: 'error',
-      message
+      message: failureMessage
     }));
   }
+
+  revalidatePath(`/${locale}/my-bots`);
+  revalidatePath(detailPath);
+  redirect(buildRoute(detailPath, {
+    tab: returnTab,
+    bind: 'success',
+    message: 'The bot was bound to the selected server successfully.'
+  }));
 }
+
 
 export async function saveBotSetupAction(formData: FormData) {
   const locale = readText(formData, 'locale') || 'en';
@@ -636,6 +615,8 @@ export async function saveBotSetupAction(formData: FormData) {
     updatedAt: new Date()
   };
 
+  let failureMessage: string | null = null;
+
   try {
     if (bot.BotSetting) {
       await prisma.botSetting.update({
@@ -651,24 +632,32 @@ export async function saveBotSetupAction(formData: FormData) {
         } satisfies Prisma.BotSettingUncheckedCreateInput
       });
     }
-
-    revalidatePath(`/${locale}/my-bots`);
-    revalidatePath(detailPath);
-    revalidatePath(getSetupPath(locale, botId));
-    redirect(buildRoute(detailPath, {
-      tab: returnTab,
-      save: 'saved',
-      message: 'The bot setup was updated successfully.'
-    }));
   } catch (error) {
-    console.error('saveBotSetupAction failed', {botId, userId: session.userId, error});
+    failureMessage = getPublicMutationErrorMessage(
+      error,
+      'Could not save setup right now. Please try again.'
+    );
+    console.error('saveBotSetupAction failed', {botId, userId: session.userId, error, message: failureMessage});
+  }
+
+  if (failureMessage) {
     redirect(buildRoute(detailPath, {
       tab: returnTab,
       save: 'error',
-      message: 'Could not save setup right now. Please try again.'
+      message: failureMessage
     }));
   }
+
+  revalidatePath(`/${locale}/my-bots`);
+  revalidatePath(detailPath);
+  revalidatePath(getSetupPath(locale, botId));
+  redirect(buildRoute(detailPath, {
+    tab: returnTab,
+    save: 'saved',
+    message: 'The bot setup was updated successfully.'
+  }));
 }
+
 
 export async function saveBotAppearanceAction(formData: FormData) {
   const locale = readText(formData, 'locale') || 'en';
@@ -787,6 +776,7 @@ export async function saveBotAppearanceAction(formData: FormData) {
     Object.keys(nextMeta).length > 0 ? (nextMeta as Prisma.InputJsonValue) : Prisma.DbNull;
 
   const now = new Date();
+  let failureMessage: string | null = null;
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -823,20 +813,27 @@ export async function saveBotAppearanceAction(formData: FormData) {
         });
       }
     });
-
-    revalidatePath(`/${locale}/my-bots`);
-    revalidatePath(detailPath);
-    redirect(buildRoute(detailPath, {
-      tab: returnTab,
-      appearance: 'saved',
-      message: 'Appearance settings were updated successfully.'
-    }));
   } catch (error) {
-    console.error('saveBotAppearanceAction failed', {botId, userId: session.userId, error});
+    failureMessage = getPublicMutationErrorMessage(
+      error,
+      'Could not save appearance settings right now.'
+    );
+    console.error('saveBotAppearanceAction failed', {botId, userId: session.userId, error, message: failureMessage});
+  }
+
+  if (failureMessage) {
     redirect(buildRoute(detailPath, {
       tab: returnTab,
       appearance: 'error',
-      message: 'Could not save appearance settings right now.'
+      message: failureMessage
     }));
   }
+
+  revalidatePath(`/${locale}/my-bots`);
+  revalidatePath(detailPath);
+  redirect(buildRoute(detailPath, {
+    tab: returnTab,
+    appearance: 'saved',
+    message: 'Appearance settings were updated successfully.'
+  }));
 }

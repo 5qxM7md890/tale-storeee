@@ -1,4 +1,3 @@
-import {cookies} from 'next/headers';
 import {notFound, redirect} from 'next/navigation';
 import {getSession} from '@/lib/auth';
 import {prisma} from '@/lib/db';
@@ -86,12 +85,12 @@ function statusChip(ok: boolean) {
 
 function readinessRow(label: string, ok: boolean, readyText: string, missingText: string) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-white/6 bg-black/20 px-4 py-3">
-      <div>
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/6 bg-black/20 px-4 py-3">
+      <div className="min-w-0">
         <p className="text-sm font-medium text-white/88">{label}</p>
-        <p className="mt-1 text-xs text-white/45">{ok ? readyText : missingText}</p>
+        <p className="mt-1 break-words text-xs text-white/45">{ok ? readyText : missingText}</p>
       </div>
-      <span className={statusChip(ok) + ' inline-flex min-w-[88px] items-center justify-center rounded-full px-3 py-1 text-xs font-semibold'}>
+      <span className={statusChip(ok) + ' inline-flex min-w-[88px] shrink-0 items-center justify-center rounded-full px-3 py-1 text-xs font-semibold'}>
         {ok ? 'Ready' : 'Missing'}
       </span>
     </div>
@@ -320,12 +319,10 @@ export default async function BotDetailsPage({
   if (!bot) notFound();
 
   const guildOptions = await getUserGuildOptions(session.userId);
-  const cookieStore = await cookies();
-  const activeGuildId = cookieStore.get('active_guild_id')?.value || null;
   const meta = readMeta(bot.BotSetting?.permissions);
-  const boundGuildId = bot.GuildBinding?.guildId || bot.guildId || '';
-  const defaultSelectedGuildId = boundGuildId || (typeof activeGuildId === 'string' ? activeGuildId : '') || guildOptions[0]?.id || '';
-  const currentSelectedGuildName = guildOptions.find((guild) => guild.id === defaultSelectedGuildId)?.name || t.noServer;
+  const boundGuildId = bot.GuildBinding?.guildId || '';
+  const selectedGuildId = bot.guildId || boundGuildId || '';
+  const currentSelectedGuildName = guildOptions.find((guild) => guild.id === selectedGuildId)?.name || t.noServer;
   const currentBoundGuildName = guildOptions.find((guild) => guild.id === boundGuildId)?.name || '';
   const displayName = bot.displayName || bot.Product?.name || 'Untitled Bot';
   const avatarImageUrl = readMetaString(meta, 'avatarImageUrl');
@@ -345,9 +342,15 @@ export default async function BotDetailsPage({
   const planLabel = bot.Product?.name || t.notSet;
   const periodLabel = bot.PricingOption?.periodMonths ? `${bot.PricingOption.periodMonths} month${bot.PricingOption.periodMonths > 1 ? 's' : ''}` : t.notSet;
 
-  const conflictingSameTypeBot = defaultSelectedGuildId ? await prisma.botInstance.findFirst({
-    where: {guildId: defaultSelectedGuildId, productId: bot.productId, NOT: {id: bot.id}},
-    include: {Product: true}
+  const conflictingSameTypeBot = selectedGuildId ? await prisma.guildBinding.findFirst({
+    where: {
+      guildId: selectedGuildId,
+      productId: bot.productId,
+      NOT: {botInstanceId: bot.id}
+    },
+    select: {
+      botInstanceId: true
+    }
   }) : null;
 
   const notice = renderNotice({bind: resolvedSearchParams?.bind, save: resolvedSearchParams?.save, appearance: resolvedSearchParams?.appearance, message: resolvedSearchParams?.message}, t);
@@ -432,23 +435,23 @@ export default async function BotDetailsPage({
               {activeTab === 'overview' ? (
                 <div className="grid gap-6 p-5 lg:p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                      <div className={`${softCard} p-5`}><p className={labelClass}>{t.currentPlan}</p><p className="mt-3 text-lg font-semibold text-white">{planLabel}</p><p className="mt-1 text-sm text-white/48">{periodLabel}</p></div>
-                      <div className={`${softCard} p-5`}><p className={labelClass}>{t.inviteStatus}</p><p className="mt-3 text-lg font-semibold text-white">{inviteReady ? t.inviteReady : t.inviteMissing}</p><p className="mt-1 text-sm text-white/48">{bot.inviteUrl || t.notSet}</p></div>
-                      <div className={`${softCard} p-5`}><p className={labelClass}>{t.bindingStatus}</p><p className="mt-3 text-lg font-semibold text-white">{isBound ? t.boundServer : t.noBinding}</p><p className="mt-1 text-sm text-white/48">{isBound ? `${currentBoundGuildName || boundGuildId} (${boundGuildId})` : t.noBinding}</p></div>
-                      <div className={`${softCard} p-5`}><p className={labelClass}>{t.runtimeReadiness}</p><p className="mt-3 text-lg font-semibold text-white">{runtimeReady ? t.runtimeReady : t.runtimeMissing}</p><p className="mt-1 text-sm text-white/48">{setupComplete ? t.setupComplete : t.setupIncomplete}</p></div>
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.currentPlan}</p><p className="mt-3 break-words text-lg font-semibold text-white">{planLabel}</p><p className="mt-1 break-words text-sm text-white/48">{periodLabel}</p></div>
+                      <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.inviteStatus}</p><p className="mt-3 break-words text-lg font-semibold text-white">{inviteReady ? t.inviteReady : t.inviteMissing}</p><p className="mt-1 break-all text-sm text-white/48">{bot.inviteUrl || t.notSet}</p></div>
+                      <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.bindingStatus}</p><p className="mt-3 break-words text-lg font-semibold text-white">{isBound ? t.boundServer : t.noBinding}</p><p className="mt-1 break-all text-sm text-white/48">{isBound ? `${currentBoundGuildName || boundGuildId} (${boundGuildId})` : t.noBinding}</p></div>
+                      <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.runtimeReadiness}</p><p className="mt-3 break-words text-lg font-semibold text-white">{runtimeReady ? t.runtimeReady : t.runtimeMissing}</p><p className="mt-1 break-words text-sm text-white/48">{setupComplete ? t.setupComplete : t.setupIncomplete}</p></div>
                     </div>
 
                     <div className={`${softCard} p-5 lg:p-6`}>
                       <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div><p className="text-lg font-semibold text-white">{t.readinessTitle}</p><p className="mt-1 text-sm text-white/45">{t.heroBody}</p></div>
+                        <div className="min-w-0"><p className="text-lg font-semibold text-white">{t.readinessTitle}</p><p className="mt-1 break-words text-sm text-white/45">{t.heroBody}</p></div>
                         <div className="flex flex-wrap gap-3">
                           {inviteButton}
                           <form action={bindBotToSelectedServerAction}>
                             <input type="hidden" name="locale" value={locale} />
                             <input type="hidden" name="botId" value={bot.id} />
                             <input type="hidden" name="returnTab" value="overview" />
-                            <input type="hidden" name="selectedGuildId" value={defaultSelectedGuildId} />
+                            <input type="hidden" name="selectedGuildId" value={selectedGuildId} />
                             <button type="submit" className="inline-flex h-11 items-center justify-center rounded-2xl border border-violet-300/16 bg-violet-500/[0.10] px-5 text-sm font-semibold text-white transition hover:bg-violet-500/[0.16]">{t.bindButton}</button>
                           </form>
                           <Link href={tabHref(bot.id, 'general')} className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-semibold text-white transition hover:bg-white/[0.08]">{t.openSetup}</Link>
@@ -479,8 +482,8 @@ export default async function BotDetailsPage({
                         </div>
                       </div>
                     </div>
-                    <div className={`${softCard} p-5`}><p className={labelClass}>{t.selectedServer}</p><p className="mt-3 text-base font-semibold text-white">{currentSelectedGuildName}</p><p className="mt-1 break-all text-sm text-white/48">{defaultSelectedGuildId || t.noServer}</p></div>
-                    <div className={`${softCard} p-5`}><p className={labelClass}>{t.currentBoundGuild}</p><p className="mt-3 text-base font-semibold text-white">{isBound ? currentBoundGuildName || boundGuildId : t.noBinding}</p><p className="mt-1 break-all text-sm text-white/48">{boundGuildId || t.noBinding}</p></div>
+                    <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.selectedServer}</p><p className="mt-3 break-words text-base font-semibold text-white">{currentSelectedGuildName}</p><p className="mt-1 break-all text-sm text-white/48">{selectedGuildId || t.noServer}</p></div>
+                    <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.currentBoundGuild}</p><p className="mt-3 break-words text-base font-semibold text-white">{isBound ? currentBoundGuildName || boundGuildId : t.noBinding}</p><p className="mt-1 break-all text-sm text-white/48">{boundGuildId || t.noBinding}</p></div>
                   </div>
                 </div>
               ) : null}
@@ -571,7 +574,7 @@ export default async function BotDetailsPage({
                         <input type="hidden" name="locale" value={locale} />
                         <input type="hidden" name="botId" value={bot.id} />
                         <input type="hidden" name="returnTab" value="general" />
-                        <label className="space-y-2"><span className={labelClass}>{t.selectServer}</span><select name="selectedGuildId" defaultValue={defaultSelectedGuildId} className={fieldClass}>{!defaultSelectedGuildId ? <option value="">{t.noServer}</option> : null}{guildOptions.map((guild) => <option key={guild.id} value={guild.id}>{guild.name} — {guild.id}</option>)}</select></label>
+                        <label className="space-y-2"><span className={labelClass}>{t.selectServer}</span><select name="selectedGuildId" defaultValue={selectedGuildId} className={fieldClass}><option value="">{t.noServer}</option>{guildOptions.map((guild) => <option key={guild.id} value={guild.id}>{guild.name} — {guild.id}</option>)}</select></label>
                         <div className="flex justify-end"><button type="submit" className="inline-flex h-11 items-center justify-center rounded-2xl border border-violet-300/18 bg-violet-500/[0.12] px-6 text-sm font-semibold text-white transition hover:bg-violet-500/[0.18]">{t.bindButton}</button></div>
                       </form>
                     </div>
@@ -596,8 +599,8 @@ export default async function BotDetailsPage({
                   </div>
 
                   <div className="space-y-4">
-                    <div className={`${softCard} p-5`}><p className={labelClass}>{t.bindingStatus}</p><p className="mt-3 text-lg font-semibold text-white">{isBound ? t.boundServer : t.noBinding}</p><p className="mt-1 text-sm text-white/48">{isBound ? `${currentBoundGuildName || boundGuildId} (${boundGuildId})` : t.noBinding}</p></div>
-                    <div className={`${softCard} p-5`}><p className={labelClass}>{t.bindRuleTitle}</p><p className="mt-3 text-sm leading-7 text-white/65">{t.bindRuleBody}</p>{conflictingSameTypeBot ? <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-100">{t.sameTypeConflict}</div> : null}</div>
+                    <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.bindingStatus}</p><p className="mt-3 break-words text-lg font-semibold text-white">{isBound ? t.boundServer : t.noBinding}</p><p className="mt-1 break-all text-sm text-white/48">{isBound ? `${currentBoundGuildName || boundGuildId} (${boundGuildId})` : t.noBinding}</p></div>
+                    <div className={`${softCard} min-w-0 p-5`}><p className={labelClass}>{t.bindRuleTitle}</p><p className="mt-3 break-words text-sm leading-7 text-white/65">{t.bindRuleBody}</p>{conflictingSameTypeBot ? <div className="mt-4 break-words rounded-2xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-100">{t.sameTypeConflict}</div> : null}</div>
                     <div className={`${softCard} p-5`}>
                       <p className={labelClass}>{t.readinessTitle}</p>
                       <div className="mt-4 space-y-3">
