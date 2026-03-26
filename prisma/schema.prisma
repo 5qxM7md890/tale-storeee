@@ -1,0 +1,454 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String         @id @default(cuid())
+  discordId         String         @unique
+  email             String?
+  avatar            String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  discordUsername   String?
+  discordGlobalName String?
+  botInstances      BotInstance[]
+  GuildBinding      GuildBinding[]
+  Order             Order[]
+  sessions          Session[]
+  subscriptions     Subscription[]
+}
+
+model Session {
+  id                  String   @id @default(cuid())
+  userId              String
+  discordAccessToken  String
+  discordTokenType    String
+  discordExpiresAt    DateTime
+  discordRefreshToken String?
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId])
+}
+
+model Product {
+  id                String             @id @default(cuid())
+  slug              String             @unique
+  name              String
+  description       String?
+  stripeProductId   String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  BotInstance       BotInstance[]
+  pricingOptions    PricingOption[]
+  subscriptionItems SubscriptionItem[]
+}
+
+model PricingOption {
+  id                String             @id @default(cuid())
+  productId         String
+  periodMonths      Int
+  unitMonthlyCents  Int
+  stripePriceId     String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  BotInstance       BotInstance[]
+  product           Product            @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subscriptionItems SubscriptionItem[]
+
+  @@unique([productId, periodMonths])
+  @@index([productId])
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String
+  stripeSubscriptionId   String             @unique
+  stripeCustomerId       String
+  status                 SubscriptionStatus
+  currentPeriodEnd       DateTime
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  provider               String             @default("GEIDEA")
+  providerSubscriptionId String?            @unique
+  billingCycle           String?
+  nextBillingAt          DateTime?
+  endsAt                 DateTime?
+  merchantReferenceId    String?
+  orderId                String?
+  BotInstance            BotInstance[]
+  invoices               Invoice[]
+  Order                  Order?             @relation(fields: [orderId], references: [id])
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  items                  SubscriptionItem[]
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([merchantReferenceId])
+  @@index([orderId])
+}
+
+model SubscriptionItem {
+  id                       String             @id @default(cuid())
+  subscriptionId           String
+  productId                String
+  pricingOptionId          String
+  qtySlots                 Int
+  stripeSubscriptionItemId String
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  BotInstance              BotInstance[]
+  pricingOption            PricingOption      @relation(fields: [pricingOptionId], references: [id], onUpdate: NoAction)
+  product                  Product            @relation(fields: [productId], references: [id], onUpdate: NoAction)
+  subscription             Subscription       @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  slots                    SubscriptionSlot[]
+
+  @@index([subscriptionId])
+  @@index([productId])
+  @@index([pricingOptionId])
+}
+
+model SubscriptionSlot {
+  id                 String           @id @default(cuid())
+  subscriptionItemId String
+  slotNo             Int
+  guildId            String?
+  status             SlotStatus       @default(UNASSIGNED)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  BotInstance        BotInstance?
+  subscriptionItem   SubscriptionItem @relation(fields: [subscriptionItemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([subscriptionItemId, slotNo])
+  @@index([guildId])
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  subscriptionId   String
+  stripeInvoiceId  String        @unique
+  status           InvoiceStatus
+  amountPaid       Int
+  hostedInvoiceUrl String?
+  pdfUrl           String?
+  invoiceCreated   DateTime
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  subscription     Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([subscriptionId])
+  @@index([invoiceCreated])
+}
+
+model WebhookEvent {
+  id        String   @id
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+/// *
+///  * ✅ جديد: BotInstance (للتجربة الآن قبل الدفع)
+model BotInstance {
+  id                 String            @id @default(cuid())
+  userId             String
+  orderId            String
+  subscriptionId     String
+  subscriptionItemId String
+  subscriptionSlotId String?           @unique
+  inventoryId        String
+  productId          String
+  pricingOptionId    String
+  status             BotInstanceStatus @default(RESERVED)
+  displayName        String?
+  clientId           String
+  guildId            String?
+  inviteUrl          String?
+  provisionedAt      DateTime?
+  activatedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  BotInventory       BotInventory      @relation(fields: [inventoryId], references: [id])
+  Order              Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  PricingOption      PricingOption     @relation(fields: [pricingOptionId], references: [id])
+  Product            Product           @relation(fields: [productId], references: [id])
+  Subscription       Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  SubscriptionItem   SubscriptionItem  @relation(fields: [subscriptionItemId], references: [id], onDelete: Cascade)
+  SubscriptionSlot   SubscriptionSlot? @relation(fields: [subscriptionSlotId], references: [id])
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  BotSetting         BotSetting?
+  GuildBinding       GuildBinding?
+  PanelSetting       PanelSetting?
+  ProvisioningJob    ProvisioningJob[]
+  ResetJob           ResetJob[]
+
+  @@index([userId])
+  @@index([guildId])
+  @@index([inventoryId])
+  @@index([orderId])
+  @@index([productId])
+  @@index([status])
+  @@index([subscriptionId])
+}
+
+model AuditLog {
+  id         String         @id
+  actorType  AuditActorType
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+
+  @@index([actorType])
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+model BotInventory {
+  id               String             @id
+  clientId         String             @unique
+  tokenEncrypted   String
+  defaultName      String?
+  defaultAvatarUrl String?
+  status           BotInventoryStatus @default(AVAILABLE)
+  assignedUserId   String?
+  assignedGuildId  String?
+  notes            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  BotInstance      BotInstance[]
+  ProvisioningJob  ProvisioningJob[]
+
+  @@index([assignedGuildId])
+  @@index([assignedUserId])
+  @@index([status])
+}
+
+model BotSetting {
+  id               String      @id
+  botInstanceId    String      @unique
+  mode             String      @default("VOICE")
+  createChannel    String?
+  panelChannel     String?
+  tempCategory     String?
+  logsChannel      String?
+  defaultUserLimit Int         @default(0)
+  language         String      @default("en")
+  permissions      Json?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime
+  BotInstance      BotInstance @relation(fields: [botInstanceId], references: [id], onDelete: Cascade)
+}
+
+model GuildBinding {
+  id            String      @id
+  userId        String
+  botInstanceId String      @unique
+  guildId       String      @unique
+  provider      String      @default("DISCORD")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime
+  BotInstance   BotInstance @relation(fields: [botInstanceId], references: [id], onDelete: Cascade)
+  User          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+  @@index([userId])
+}
+
+model Order {
+  id                  String            @id
+  userId              String
+  provider            String            @default("GEIDEA")
+  status              OrderStatus       @default(PENDING)
+  currency            String            @default("SAR")
+  subtotalMinor       Int
+  discountMinor       Int               @default(0)
+  totalMinor          Int
+  couponCode          String?
+  merchantReferenceId String            @unique
+  selectedGuildId     String?
+  billingAddress      Json?
+  lineItems           Json?
+  providerPayload     Json?
+  fulfilledAt         DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime
+  BotInstance         BotInstance[]
+  User                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Payment             Payment[]
+  ProvisioningJob     ProvisioningJob[]
+  Subscription        Subscription[]
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([userId])
+}
+
+model PanelSetting {
+  id              String      @id
+  botInstanceId   String      @unique
+  title           String?
+  accent          String?
+  showMemberCount Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime
+  BotInstance     BotInstance @relation(fields: [botInstanceId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id                      String        @id
+  orderId                 String
+  provider                String        @default("GEIDEA")
+  providerReference       String?
+  providerOrderId         String?
+  merchantReferenceId     String        @unique
+  amountMinor             Int
+  currency                String        @default("SAR")
+  status                  PaymentStatus @default(INITIATED)
+  geideaSessionId         String?
+  responseCode            String?
+  responseMessage         String?
+  detailedResponseCode    String?
+  detailedResponseMessage String?
+  providerPayload         Json?
+  paidAt                  DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime
+  Order                   Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model ProvisioningJob {
+  id            String                @id
+  orderId       String
+  botInstanceId String?
+  inventoryId   String?
+  action        String                @default("PROVISION")
+  status        ProvisioningJobStatus @default(QUEUED)
+  attempts      Int                   @default(0)
+  payload       Json?
+  errorMessage  String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime
+  BotInstance   BotInstance?          @relation(fields: [botInstanceId], references: [id])
+  BotInventory  BotInventory?         @relation(fields: [inventoryId], references: [id])
+  Order         Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([botInstanceId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model ResetJob {
+  id            String         @id
+  botInstanceId String
+  status        ResetJobStatus @default(QUEUED)
+  payload       Json?
+  errorMessage  String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime
+  BotInstance   BotInstance    @relation(fields: [botInstanceId], references: [id], onDelete: Cascade)
+
+  @@index([botInstanceId])
+  @@index([status])
+}
+
+enum SlotStatus {
+  UNASSIGNED
+  ASSIGNED
+  DISABLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  TRIALING
+  UNPAID
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum AuditActorType {
+  SYSTEM
+  USER
+  ADMIN
+  WEBHOOK
+  WORKER
+}
+
+enum BotInstanceStatus {
+  RESERVED
+  ASSIGNED
+  ACTIVE
+  EXPIRED
+  RESETTING
+  MAINTENANCE
+}
+
+enum BotInventoryStatus {
+  AVAILABLE
+  RESERVED
+  ASSIGNED
+  ACTIVE
+  EXPIRED
+  RESETTING
+  MAINTENANCE
+}
+
+enum OrderStatus {
+  PENDING
+  SESSION_CREATED
+  PAID
+  FULFILLED
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  INITIATED
+  SESSION_CREATED
+  CALLBACK_RECEIVED
+  PAID
+  FAILED
+  CANCELED
+  CREATE_SESSION_FAILED
+  SIGNATURE_INVALID
+}
+
+enum ProvisioningJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum ResetJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+}
