@@ -578,7 +578,7 @@ function SidebarShell({
 
 function PortStyles() {
   return (
-    <style jsx global>{`
+    <style>{`
       .bm-port-shell {
         --bg: #06060d;
         --bg-2: #090812;
