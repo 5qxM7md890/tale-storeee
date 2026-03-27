@@ -553,6 +553,122 @@ function AssetRow({
   );
 }
 
+
+function SidebarShell({
+  botId,
+  tabs,
+  activeTab,
+  displayName,
+  avatarImageUrl,
+  bannerImageUrl,
+  activityType,
+  planLabel,
+  planPeriod,
+  selectedGuildName,
+  currentBoundGuildName,
+  isBound,
+  t
+}: {
+  botId: string;
+  tabs: Array<{key: TabKey; title: string; desc: string}>;
+  activeTab: TabKey;
+  displayName: string;
+  avatarImageUrl: string;
+  bannerImageUrl: string;
+  activityType: string;
+  planLabel: string;
+  planPeriod: string;
+  selectedGuildName: string;
+  currentBoundGuildName: string;
+  isBound: boolean;
+  t: ReturnType<typeof getText>;
+}) {
+  return (
+    <aside className="xl:sticky xl:top-6">
+      <div className="overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(10,7,18,0.95),rgba(7,5,12,0.98))] shadow-[0_26px_80px_rgba(0,0,0,0.42)]">
+        <div className="border-b border-white/6 p-3">
+          <div className="overflow-hidden rounded-[20px] border border-white/8 bg-[#0b0815]">
+            <div className="relative h-16 overflow-hidden border-b border-white/6 bg-[linear-gradient(135deg,rgba(124,92,255,0.22),rgba(62,38,132,0.12),rgba(8,6,15,0))]">
+              {bannerImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bannerImageUrl} alt={displayName} className="h-full w-full object-cover opacity-95" />
+              ) : null}
+            </div>
+            <div className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="relative -mt-8 h-14 w-14 shrink-0 overflow-hidden rounded-[16px] border border-white/10 bg-[#120d21] shadow-[0_12px_28px_rgba(0,0,0,0.32)]">
+                  {avatarImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarImageUrl} alt={displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white/70">
+                      {displayName.charAt(0)}
+                    </div>
+                  )}
+                  <span className="absolute bottom-1.5 left-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#120d21]" />
+                </div>
+                <div className="min-w-0 pt-1">
+                  <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                  <p className="mt-1 truncate text-xs text-white/42">{formatStatus(activityType)}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between gap-3 rounded-[14px] border border-white/6 bg-white/[0.03] px-3 py-2">
+                  <span className="text-[11px] uppercase tracking-[0.16em] text-white/34">{t.currentPlan}</span>
+                  <span className="truncate text-xs font-medium text-white/78">{planLabel}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-[14px] border border-white/6 bg-white/[0.03] px-3 py-2">
+                  <span className="text-[11px] uppercase tracking-[0.16em] text-white/34">{t.runtimeLabel}</span>
+                  <span className="truncate text-xs font-medium text-white/78">{planPeriod}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <nav className="space-y-1.5 px-3 py-3">
+          {tabs.map((tab) => (
+            <NavTab
+              key={tab.key}
+              href={tabHref(botId, tab.key)}
+              title={tab.title}
+              desc={tab.desc}
+              active={activeTab === tab.key}
+            />
+          ))}
+        </nav>
+
+        <div className="border-t border-white/6 px-3 py-3">
+          <div className="space-y-2 rounded-[18px] border border-white/7 bg-white/[0.025] p-3">
+            <div>
+              <p className={tinyLabel}>{t.selectedServer}</p>
+              <p className="mt-1 truncate text-sm text-white/82">{selectedGuildName}</p>
+            </div>
+            <div>
+              <p className={tinyLabel}>{t.boundServer}</p>
+              <p className="mt-1 truncate text-sm text-white/72">{currentBoundGuildName}</p>
+            </div>
+            <div className="pt-1">
+              <span
+                className={cx(
+                  'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                  isBound
+                    ? 'border-emerald-400/22 bg-emerald-500/[0.08] text-emerald-100'
+                    : 'border-white/8 bg-white/[0.03] text-white/56'
+                )}
+              >
+                {isBound ? t.readyBadge : t.missingBadge}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+
 export default async function BotDetailsPage({
   params,
   searchParams
