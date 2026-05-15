@@ -1,0 +1,136 @@
+{
+  "nav": {
+    "home": "Home",
+    "commands": "Commands",
+    "pricing": "Pricing",
+    "support": "Support",
+    "dashboard": "Dashboard",
+    "myBots": "My Bots",
+    "billing": "Billing"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Log out"
+  },
+  "user": {
+    "dashboard": "Dashboard",
+    "subscriptions": "Subscriptions",
+    "invoices": "Invoices",
+    "logout": "Logout"
+  },
+  "home": {
+    "badge": "Dashboard Version v1",
+    "heroTitle": "Power your server with Tale Store",
+    "heroSubtitle": "Browse premium Discord bot plans designed for smooth setup, reliable access, and flexible subscriptions.",
+    "getStarted": "Get Started",
+    "support": "Support",
+    "featuresLabel": "Features",
+    "cmsTitle": "Comprehensive Management System",
+    "cmsSubtitle": "Everything you need to manage your community with complete control and protection.",
+    "cards": {
+      "adminTitle": "Administrative Commands",
+      "adminDesc": "Powerful command system with custom shortcuts, permissions, and role-based access control.",
+      "adminBullets": [
+        "Custom command creation and shortcuts",
+        "Granular permission controls",
+        "Command usage logging and analytics"
+      ],
+      "voiceTitle": "Voice & Text Management",
+      "voiceBullets": [
+        "Dynamic voice room creation and management",
+        "Advanced text chat moderation tools",
+        "Automated content filtering and alerts"
+      ],
+      "protectTitle": "Complete Protection",
+      "protectBullets": [
+        "Role protection and verification",
+        "Attack prevention and detection",
+        "Anti-fake measures and identity verification"
+      ]
+    },
+    "showcase": {
+      "badge": "apps",
+      "cta": "Discover More",
+      "overview": {
+        "title": "See your server clearly with smart insights",
+        "body": "Track activity, engagement, and performance with dashboards that make every decision easier."
+      },
+      "messages": {
+        "title": "Send polished messages your way",
+        "body": "Create onboarding flows, announcements, and updates that fit your server and brand."
+      },
+      "shadows": {
+        "title": "Protect your community behind the scenes",
+        "body": "Keep moderation, anti-raid checks, and automated safeguards running quietly in the background."
+      },
+      "roles": {
+        "title": "Automate roles with confidence",
+        "body": "Give members the right access instantly through reactions, permissions, and reliable role rules."
+      }
+    },
+    "faq": {
+      "label": "FAQ",
+      "title": "Frequently Asked Questions",
+      "subtitle": "Find answers to common questions about Tale Store.",
+      "q1": "How does the role protection system work?",
+      "a1": "It monitors sensitive role changes and enforces protection rules to prevent unauthorized edits.",
+      "q2": "Can I create custom commands?",
+      "a2": "Yes—create custom commands/shortcuts and bind them to granular permissions.",
+      "q3": "What types of attacks can the system prevent?",
+      "a3": "It prevents common raid patterns, suspicious joins, role abuse, and permission escalations.",
+      "q4": "How does the anti-fake system work?",
+      "a4": "It detects impersonation patterns and blocks suspicious activity before it spreads.",
+      "q5": "Can I migrate from another moderation bot?",
+      "a5": "Yes—our team can help migrate settings and workflows depending on your setup."
+    },
+    "cta": {
+      "title": "Ready to protect your community?",
+      "subtitle": "Join thousands of communities already using Tale Store for comprehensive protection and management.",
+      "button": "Start Your Experience Now"
+    },
+    "hero": {
+      "title": "Power your server with Tale Store",
+      "subtitle": "Browse premium Discord bot plans designed for smooth setup, reliable access, and flexible subscriptions.",
+      "ctaPrimary": "Get Started",
+      "ctaSecondary": "Support"
+    },
+    "features": {
+      "label": "Features",
+      "title": "Comprehensive Management System",
+      "subtitle": "Everything you need to manage your community with complete control and protection.",
+      "cards": {
+        "admin": {
+          "title": "Administrative Commands",
+          "desc": "Powerful command system with custom shortcuts, permissions, and role-based access control.",
+          "b1": "Custom command creation and shortcuts",
+          "b2": "Granular permission controls",
+          "b3": "Command usage logging and analytics"
+        },
+        "voice": {
+          "title": "Voice & Text Management",
+          "desc": "Complete control over voice rooms and text channels with advanced moderation tools.",
+          "b1": "Dynamic voice room creation and management",
+          "b2": "Advanced text chat moderation tools",
+          "b3": "Automated content filtering and alerts"
+        },
+        "protection": {
+          "title": "Complete Protection",
+          "desc": "Robust security features to protect your community from attacks and unauthorized access.",
+          "b1": "Role protection and verification",
+          "b2": "Attack prevention and detection",
+          "b3": "Anti-fake measures and identity verification"
+        }
+      }
+    }
+  },
+  "Nav": {
+    "home": "Home",
+    "commands": "Commands",
+    "pricing": "Pricing",
+    "support": "Support"
+  },
+  "commands": {
+    "title": "Tale Commands",
+    "subtitle": "Find the command you are looking for and how to use it."
+  }
+}
